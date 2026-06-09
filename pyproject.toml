@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "france-opendata"
-version = "0.1.0"
+version = "0.1.1"
 description = "Connecteurs Python data publique France (open data) : Recherche Entreprises, Sirene, INPI/BCE (bilans), BODACC, DVF. Sans clé sauf Sirene (SIRENE_API_KEY env)."
 requires-python = ">=3.10"
 dependencies = ["requests>=2.31"]
