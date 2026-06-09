@@ -4,10 +4,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "france-opendata"
-version = "0.1.1"
+version = "0.2.0"
 description = "Connecteurs Python data publique France (open data) : Recherche Entreprises, Sirene, INPI/BCE (bilans), BODACC, DVF. Sans clé sauf Sirene (SIRENE_API_KEY env)."
 requires-python = ">=3.10"
 dependencies = ["requests>=2.31"]
+
+[project.optional-dependencies]
+# Reader local de la stock SIRENE (parquet INSEE via DuckDB) — france_opendata.sirene_stock.
+# Lourd, donc à la carte : `france-opendata[stock]`. Sans cet extra, seuls les clients API
+# (sans clé / clé Sirene) sont disponibles.
+stock = ["duckdb>=1.1"]
 
 [tool.setuptools.packages.find]
 include = ["france_opendata*"]
