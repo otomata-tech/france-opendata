@@ -10,11 +10,14 @@ partagés entre projets (source unique, pas de duplication).
 | `BodaccClient` | BODACC (créations, ventes, procédures collectives) | — |
 | `DvfClient` | DVF Etalab (transactions immobilières, comparables) | — |
 | `SireneClient` | INSEE Sirene (SIRET, siège) | `SIRENE_API_KEY` (env) |
+| `BdTopoClient` | IGN BDTOPO V3 via WFS (bâti existant d'une parcelle : emprise au sol, CES réel, usages, hauteurs) | — |
 
 ```python
 from france_opendata import EntreprisesClient, DvfClient
 EntreprisesClient().search(query="SCI", code_postal="94500", naf=["68.20A"])
 DvfClient().stats(code_commune="94017")
+# bâti d'une parcelle (géométrie GeoJSON du cadastre) → emprise au sol, CES réel
+BdTopoClient().bati_parcelle(parcelle_geometry, contenance_m2=2493)
 ```
 
 ## Clé Sirene (optionnelle)

@@ -4,6 +4,7 @@
 - InpiClient        : INPI/BCE (bilans, ratios) — sans clé
 - BodaccClient      : BODACC (créations, ventes, procédures collectives) — sans clé
 - DvfClient         : DVF Etalab (transactions immobilières, comparables) — sans clé
+- BdTopoClient      : IGN BDTOPO V3 via WFS (bâti existant d'une parcelle) — sans clé
 - SireneClient      : INSEE Sirene (SIRET, siège) — clé via env SIRENE_API_KEY
 
 Lib autonome (dépend de `requests` uniquement). Source unique partagée entre projets
@@ -14,5 +15,6 @@ from .sirene import SireneClient
 from .inpi import InpiClient
 from .bodacc import BodaccClient
 from .dvf import DvfClient
+from .bdtopo import BdTopoClient
 
-__all__ = ["EntreprisesClient", "SireneClient", "InpiClient", "BodaccClient", "DvfClient"]
+__all__ = ["EntreprisesClient", "SireneClient", "InpiClient", "BodaccClient", "DvfClient", "BdTopoClient"]
