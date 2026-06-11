@@ -7,6 +7,7 @@
 - BdTopoClient      : IGN BDTOPO V3 via WFS (bâti existant d'une parcelle) — sans clé
 - SitadelClient     : Sit@del SDES/DiDo (permis de construire/aménager) — sans clé, fichiers nationaux à pré-fetcher
 - SireneClient      : INSEE Sirene (SIRET, siège) — clé via env SIRENE_API_KEY
+- GeorisquesClient  : Géorisques installations classées ICPE (régime, IED, Seveso, DREAL) — sans clé
 
 Lib autonome (dépend de `requests` uniquement). Source unique partagée entre projets
 (remplace la duplication des connecteurs).
@@ -18,6 +19,7 @@ from .bodacc import BodaccClient
 from .dvf import DvfClient
 from .bdtopo import BdTopoClient
 from .sitadel import SitadelClient
+from .georisques import GeorisquesClient
 
 __all__ = ["EntreprisesClient", "SireneClient", "InpiClient", "BodaccClient", "DvfClient",
-           "BdTopoClient", "SitadelClient"]
+           "BdTopoClient", "SitadelClient", "GeorisquesClient"]
