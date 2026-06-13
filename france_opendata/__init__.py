@@ -8,6 +8,10 @@
 - SitadelClient     : Sit@del SDES/DiDo (permis de construire/aménager) — sans clé, fichiers nationaux à pré-fetcher
 - SireneClient      : INSEE Sirene (SIRET, siège) — clé via env SIRENE_API_KEY
 - GeorisquesClient  : Géorisques installations classées ICPE (régime, IED, Seveso, DREAL) — sans clé
+- EnedisClient      : Enedis conso élec annuelle par adresse (signaux MWh) — sans clé
+- BanClient         : Base Adresse Nationale (géocodage / reverse) — sans clé
+- ApiCartoClient    : IGN API Carto cadastre (parcelle en un point/géométrie) — sans clé
+- PvgisClient       : PVGIS JRC (productible solaire annuel pour un point + kWc) — sans clé
 
 Lib autonome (dépend de `requests` uniquement). Source unique partagée entre projets
 (remplace la duplication des connecteurs).
@@ -20,6 +24,11 @@ from .dvf import DvfClient
 from .bdtopo import BdTopoClient
 from .sitadel import SitadelClient
 from .georisques import GeorisquesClient
+from .enedis import EnedisClient
+from .ban import BanClient
+from .apicarto import ApiCartoClient
+from .pvgis import PvgisClient
 
 __all__ = ["EntreprisesClient", "SireneClient", "InpiClient", "BodaccClient", "DvfClient",
-           "BdTopoClient", "SitadelClient", "GeorisquesClient"]
+           "BdTopoClient", "SitadelClient", "GeorisquesClient",
+           "EnedisClient", "BanClient", "ApiCartoClient", "PvgisClient"]
