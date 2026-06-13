@@ -12,6 +12,8 @@
 - BanClient         : Base Adresse Nationale (géocodage / reverse) — sans clé
 - ApiCartoClient    : IGN API Carto cadastre (parcelle en un point/géométrie) — sans clé
 - PvgisClient       : PVGIS JRC (productible solaire annuel pour un point + kWc) — sans clé
+- SpectacleClient   : Licences entrepreneurs spectacles vivants (data.culture.gouv.fr) — sans clé
+- OpendatasoftClient: client générique Opendatasoft Explore v2.1 (tout portail ODS public)
 
 Lib autonome (dépend de `requests` uniquement). Source unique partagée entre projets
 (remplace la duplication des connecteurs).
@@ -28,7 +30,10 @@ from .enedis import EnedisClient
 from .ban import BanClient
 from .apicarto import ApiCartoClient
 from .pvgis import PvgisClient
+from .opendatasoft import OpendatasoftClient
+from .culture_spectacle import SpectacleClient
 
 __all__ = ["EntreprisesClient", "SireneClient", "InpiClient", "BodaccClient", "DvfClient",
            "BdTopoClient", "SitadelClient", "GeorisquesClient",
-           "EnedisClient", "BanClient", "ApiCartoClient", "PvgisClient"]
+           "EnedisClient", "BanClient", "ApiCartoClient", "PvgisClient",
+           "OpendatasoftClient", "SpectacleClient"]

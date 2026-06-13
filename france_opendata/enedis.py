@@ -19,15 +19,11 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-import requests
-
-from ._opendatasoft import ods_export
+from .opendatasoft import OpendatasoftClient
 
 
-RECORDS_URL = (
-    "https://opendata.enedis.fr/api/explore/v2.1/catalog/datasets/"
-    "consommation-annuelle-entreprise-par-adresse/records"
-)
+PORTAL = "https://opendata.enedis.fr"
+DATASET = "consommation-annuelle-entreprise-par-adresse"
 
 # Secteurs Enedis (code_grand_secteur, NAF1 grossier).
 SECTEURS = ("INDUSTRIE", "TERTIAIRE", "AGRICULTURE")
@@ -63,7 +59,7 @@ def _signal(r: dict[str, Any]) -> Optional[dict[str, Any]]:
 class EnedisClient:
     def __init__(self, timeout: int = 120):
         self.timeout = timeout
-        self.session = requests.Session()
+        self.ods = OpendatasoftClient(PORTAL, timeout=timeout)
 
     def consommation_par_adresse(
         self,
@@ -93,7 +89,6 @@ class EnedisClient:
         if max_mwh is not None:
             parts.append(f"consommation_annuelle_totale_de_ladresse_mwh<={max_mwh}")
         where = " AND ".join(parts)
-        rows = ods_export(RECORDS_URL, where=where, limit=limit,
-                          session=self.session, timeout=self.timeout)
+        rows = self.ods.export(DATASET, "json", where=where, limit=limit)
         signals = [s for r in rows if (s := _signal(r))]
         return {"total": len(signals), "signals": signals}
