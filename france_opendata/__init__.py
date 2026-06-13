@@ -14,6 +14,7 @@
 - PvgisClient       : PVGIS JRC (productible solaire annuel pour un point + kWc) — sans clé
 - SpectacleClient   : Licences entrepreneurs spectacles vivants (data.culture.gouv.fr) — sans clé
 - OpendatasoftClient: client générique Opendatasoft Explore v2.1 (tout portail ODS public)
+- FinessClient      : annuaire établissements sanitaires/médico-sociaux FINESS (data.gouv) — sans clé
 
 Lib autonome (dépend de `requests` uniquement). Source unique partagée entre projets
 (remplace la duplication des connecteurs).
@@ -32,8 +33,9 @@ from .apicarto import ApiCartoClient
 from .pvgis import PvgisClient
 from .opendatasoft import OpendatasoftClient
 from .culture_spectacle import SpectacleClient
+from .finess import FinessClient
 
 __all__ = ["EntreprisesClient", "SireneClient", "InpiClient", "BodaccClient", "DvfClient",
            "BdTopoClient", "SitadelClient", "GeorisquesClient",
            "EnedisClient", "BanClient", "ApiCartoClient", "PvgisClient",
-           "OpendatasoftClient", "SpectacleClient"]
+           "OpendatasoftClient", "SpectacleClient", "FinessClient"]
