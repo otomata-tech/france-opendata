@@ -15,6 +15,7 @@
 - SpectacleClient   : Licences entrepreneurs spectacles vivants (data.culture.gouv.fr) — sans clé
 - OpendatasoftClient: client générique Opendatasoft Explore v2.1 (tout portail ODS public)
 - FinessClient      : annuaire établissements sanitaires/médico-sociaux FINESS (data.gouv) — sans clé
+- HasEssmsClient    : évaluations ESSMS (HAS, DuckDB sur parquet) — sans clé, extra [sante]
 
 Lib autonome (dépend de `requests` uniquement). Source unique partagée entre projets
 (remplace la duplication des connecteurs).
@@ -34,8 +35,9 @@ from .pvgis import PvgisClient
 from .opendatasoft import OpendatasoftClient
 from .culture_spectacle import SpectacleClient
 from .finess import FinessClient
+from .has_essms import HasEssmsClient  # import lazy de duckdb (extra [sante]) dans _connect
 
 __all__ = ["EntreprisesClient", "SireneClient", "InpiClient", "BodaccClient", "DvfClient",
            "BdTopoClient", "SitadelClient", "GeorisquesClient",
            "EnedisClient", "BanClient", "ApiCartoClient", "PvgisClient",
-           "OpendatasoftClient", "SpectacleClient", "FinessClient"]
+           "OpendatasoftClient", "SpectacleClient", "FinessClient", "HasEssmsClient"]

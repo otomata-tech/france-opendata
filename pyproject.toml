@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "france-opendata"
-version = "0.8.0"
-description = "Connecteurs Python data publique France (open data) : Recherche Entreprises, Sirene, INPI/BCE (bilans), BODACC, DVF, BDTOPO, Sit@del, Géorisques, Enedis (conso élec), BAN (géocodage), API Carto (cadastre), PVGIS (solaire), licences spectacle (culture), FINESS (établissements santé). Client Opendatasoft générique. Sans clé sauf Sirene (SIRENE_API_KEY env)."
+version = "0.9.0"
+description = "Connecteurs Python data publique France (open data) : Recherche Entreprises, Sirene, INPI/BCE (bilans), BODACC, DVF, BDTOPO, Sit@del, Géorisques, Enedis (conso élec), BAN (géocodage), API Carto (cadastre), PVGIS (solaire), licences spectacle (culture), FINESS + évaluations ESSMS HAS (santé). Client Opendatasoft générique. Sans clé sauf Sirene (SIRENE_API_KEY env)."
 requires-python = ">=3.10"
 dependencies = ["requests>=2.31"]
 
@@ -14,6 +14,8 @@ dependencies = ["requests>=2.31"]
 # Lourd, donc à la carte : `france-opendata[stock]`. Sans cet extra, seuls les clients API
 # (sans clé / clé Sirene) sont disponibles.
 stock = ["duckdb>=1.1"]
+# Évaluations ESSMS HAS (DuckDB sur parquet distant httpfs) — france_opendata.has_essms.
+sante = ["duckdb>=1.1"]
 
 [tool.setuptools.packages.find]
 include = ["france_opendata*"]
