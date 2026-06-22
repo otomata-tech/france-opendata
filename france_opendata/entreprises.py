@@ -35,6 +35,7 @@ class EntreprisesClient:
         code_postal: str = None,
         commune: str = None,
         employees: List[str] = None,
+        categorie_entreprise: str = None,
         ca_min: int = None,
         ca_max: int = None,
         idcc: List[str] = None,
@@ -50,7 +51,8 @@ class EntreprisesClient:
             departement: Department code (e.g., '75')
             code_postal: Postal code
             commune: City name
-            employees: List of employee range codes
+            employees: List of employee range codes (tranche effectif unité légale)
+            categorie_entreprise: INSEE size category — 'PME', 'ETI' or 'GE'
             ca_min: Minimum turnover (chiffre d'affaires)
             ca_max: Maximum turnover
             idcc: List of IDCC codes (convention collective, e.g. ['1285', '3090'])
@@ -81,6 +83,8 @@ class EntreprisesClient:
             params["commune"] = commune
         if employees:
             params["tranche_effectif_salarie_entreprise"] = ",".join(employees)
+        if categorie_entreprise:
+            params["categorie_entreprise"] = categorie_entreprise
         if ca_min:
             params["ca_min"] = ca_min
         if ca_max:
@@ -91,8 +95,8 @@ class EntreprisesClient:
         # API requires at least one search parameter
         search_params = [
             "q", "activite_principale", "departement", "code_postal",
-            "commune", "tranche_effectif_salarie_entreprise", "ca_min", "ca_max",
-            "id_convention_collective",
+            "commune", "tranche_effectif_salarie_entreprise", "categorie_entreprise",
+            "ca_min", "ca_max", "id_convention_collective",
         ]
         if not any(p in params for p in search_params):
             raise ValueError(
