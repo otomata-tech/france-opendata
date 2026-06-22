@@ -4,8 +4,14 @@ Reader local de la stock SIRENE (le parquet INSEE complet). Source unique partag
 oto-mcp (tools/API) ET les apps co-localisées (ex. tuls) consomment CE module
 plutôt que de dupliquer la requête ou de maintenir une table PG en doublon.
 
-Le parquet vit sur le filesystem du serveur — path résolu via `SIRENE_STOCK_PARQUET_PATH`
-env, défaut `/opt/oto-mcp/data/sirene/StockEtablissement.parquet`.
+Le parquet est résolu via `SIRENE_STOCK_PARQUET_PATH` (défaut
+`/opt/oto-mcp/data/sirene/StockEtablissement.parquet`). Trois sources possibles :
+- chemin local (défaut) ;
+- `s3://bucket/key` — lu via httpfs, creds DuckDB depuis l'env `SIRENE_STOCK_S3_*`
+  (ENDPOINT, KEY_ID, SECRET, + REGION/URL_STYLE optionnels) ;
+- `https://…` public — lu via httpfs sans credential.
+Le distant fait des range reads (pruning de row groups) : seuls les chunks utiles
+transitent, pas les ~2 Go. Lookup par siren ~0.6 s, scan filtré quelques secondes.
 
 DuckDB en lecture seule : connexion à la demande, view sur le parquet, query. Pas
 d'index — DuckDB lit les row groups + columnar pruning. Lookups par `siren`/`siret`
@@ -71,11 +77,51 @@ _COLUMN_MAP = {
 _SELECT_CLAUSE = ", ".join(f'"{src}" AS {dst}' for src, dst in _COLUMN_MAP.items())
 
 
+def _is_remote(path: str) -> bool:
+    return path.startswith(("s3://", "http://", "https://"))
+
+
+def _configure_remote(conn: duckdb.DuckDBPyConnection, path: str) -> None:
+    """Active httpfs pour lire un parquet distant (S3 ou HTTPS public). Pour s3://,
+    pose un SECRET DuckDB depuis l'env (SIRENE_STOCK_S3_*). Range reads + pruning
+    de row groups → seuls les chunks utiles transitent (pas le fichier entier)."""
+    conn.execute("INSTALL httpfs; LOAD httpfs;")
+    conn.execute("SET enable_http_metadata_cache=true;")
+    conn.execute("SET enable_object_cache=true;")
+    if not path.startswith("s3://"):
+        return  # HTTPS public : aucun credential
+    endpoint = os.environ.get("SIRENE_STOCK_S3_ENDPOINT")
+    key = os.environ.get("SIRENE_STOCK_S3_KEY_ID")
+    secret = os.environ.get("SIRENE_STOCK_S3_SECRET")
+    if not (endpoint and key and secret):
+        raise RuntimeError(
+            "Parquet S3 distant : définir SIRENE_STOCK_S3_ENDPOINT, "
+            "SIRENE_STOCK_S3_KEY_ID et SIRENE_STOCK_S3_SECRET."
+        )
+    region = os.environ.get("SIRENE_STOCK_S3_REGION", "fr-par")
+    url_style = os.environ.get("SIRENE_STOCK_S3_URL_STYLE", "vhost")
+    # endpoint sans scheme pour DuckDB ; échappe les quotes dans les littéraux.
+    ep = endpoint.replace("https://", "").replace("http://", "").rstrip("/")
+    def _q(v: str) -> str:
+        return v.replace("'", "''")
+    conn.execute(
+        "CREATE OR REPLACE SECRET sirene_s3 (TYPE S3, "
+        f"KEY_ID '{_q(key)}', SECRET '{_q(secret)}', ENDPOINT '{_q(ep)}', "
+        f"REGION '{_q(region)}', URL_STYLE '{_q(url_style)}', USE_SSL true)"
+    )
+
+
 def _connect() -> duckdb.DuckDBPyConnection:
     """Une nouvelle connexion read-only par appel. DuckDB est rapide à ouvrir
     (~ms) et les connections ne sont pas thread-safe pour des queries concurrentes,
-    donc on évite de partager. La page cache OS fait le travail de mise en cache."""
-    return duckdb.connect(database=":memory:", read_only=False)
+    donc on évite de partager. La page cache OS fait le travail de mise en cache.
+
+    Si le parquet est distant (s3:// ou https://), active httpfs sur la connexion."""
+    conn = duckdb.connect(database=":memory:", read_only=False)
+    path = parquet_path()
+    if _is_remote(path):
+        _configure_remote(conn, path)
+    return conn
 
 
 def _from_parquet() -> str:
@@ -295,13 +341,16 @@ def parquet_info() -> dict[str, Any]:
     """Métadonnées pour healthcheck : taille fichier, dernière modif, count."""
     path = parquet_path()
     info: dict[str, Any] = {"path": path}
-    try:
-        st = os.stat(path)
-        info["size_bytes"] = st.st_size
-        info["mtime"] = st.st_mtime
-    except FileNotFoundError:
-        info["error"] = "not_found"
-        return info
+    if _is_remote(path):
+        info["remote"] = True
+    else:
+        try:
+            st = os.stat(path)
+            info["size_bytes"] = st.st_size
+            info["mtime"] = st.st_mtime
+        except FileNotFoundError:
+            info["error"] = "not_found"
+            return info
     try:
         info["total_rows"] = int(
             _connect().execute(f"SELECT COUNT(*) FROM {_from_parquet()}").fetchone()[0]
