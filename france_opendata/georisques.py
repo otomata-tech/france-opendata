@@ -67,3 +67,44 @@ class GeorisquesClient:
         )
         resp.raise_for_status()
         return resp.json()
+
+    def _get(self, path: str, params: dict) -> dict[str, Any]:
+        resp = requests.get(
+            f"{BASE_URL}/{path}",
+            params=params,
+            headers={"Accept": "application/json", "User-Agent": "france-opendata"},
+            timeout=TIMEOUT,
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    def risques_commune(self, code_insee: str) -> dict[str, Any]:
+        """Risques naturels et technologiques recensés sur une commune (GASPAR).
+
+        Args:
+            code_insee: code commune INSEE (5 caractères).
+
+        Returns:
+            {"code_insee": str, "risques": [libellés longs distincts]} — inondation,
+            mouvement de terrain, retrait-gonflement des argiles, sismicité, TMD,
+            ICPE/Seveso, etc. Liste vide si aucun risque recensé.
+        """
+        data = self._get("gaspar/risques",
+                         {"code_insee": code_insee, "page": 1, "page_size": 20})
+        libelles: list[str] = []
+        for row in data.get("data") or []:
+            for d in row.get("risques_detail", []):
+                lib = d.get("libelle_risque_long")
+                if lib and lib not in libelles:
+                    libelles.append(lib)
+        return {"code_insee": code_insee, "risques": libelles}
+
+    def alea_argiles(self, lon: float, lat: float) -> dict[str, Any]:
+        """Aléa retrait-gonflement des argiles (RGA) au point (lon, lat).
+
+        Returns {"code_exposition", "exposition"} — niveau d'exposition (faible /
+        moyen / fort) au point. L'argile fort est un facteur de coût fondations.
+        """
+        data = self._get("rga", {"latlon": f"{lon},{lat}"})
+        return {"code_exposition": data.get("codeExposition"),
+                "exposition": data.get("exposition")}
