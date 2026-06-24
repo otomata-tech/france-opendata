@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "france-opendata"
 version = "0.14.0"
-description = "Connecteurs Python data publique France (open data) : Recherche Entreprises, Sirene, INPI/BCE (bilans), BODACC, BOAMP (marchés publics), DVF+ Cerema (transactions immobilières, depuis 2014), BDTOPO, Sit@del, Géorisques (ICPE + risques naturels + argiles), Enedis (conso élec), BAN (géocodage), API Carto (cadastre), PVGIS (solaire), GPU (zonage PLU), QPV, INSEE Mélodi (socio-démo commune), EPFIF, licences spectacle (culture), FINESS + évaluations ESSMS HAS (santé). Client Opendatasoft générique. Sans clé sauf Sirene (SIRENE_API_KEY env)."
+description = "Connecteurs Python data publique France (open data) : entreprises (Recherche Entreprises, Sirene, INPI bilans, BODACC), marchés publics (BOAMP), immobilier (DVF+ Cerema), foncier/cadastre/urbanisme (BAN, API Carto, BDTOPO, Sit@del, GPU, QPV, Géorisques, EPFIF), énergie (Enedis, PVGIS), socio-démo (INSEE Mélodi), culture, santé (FINESS, ESSMS HAS). Sans clé sauf Sirene. Détail : README."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = ["requests>=2.31"]
