@@ -115,7 +115,10 @@ class EntreprisesClient:
                 error_msg = resp.json().get("erreur", f"API error: {resp.status_code}")
             except Exception:
                 error_msg = f"API error: {resp.status_code} {resp.text}"
-            raise Exception(error_msg)
+            # HTTPError porte `.response.status_code` : un 4xx (NAF/param invalide)
+            # est un refus d'entrée amont, pas un bug — le consommateur peut le
+            # classer (ex. drop Sentry) au lieu de l'avaler en Exception nue.
+            raise requests.HTTPError(error_msg, response=resp)
 
         return resp.json()
 
@@ -136,7 +139,9 @@ class EntreprisesClient:
         )
 
         if not resp.ok:
-            raise Exception(f"API error: {resp.status_code} {resp.text}")
+            raise requests.HTTPError(
+                f"API error: {resp.status_code} {resp.text}", response=resp
+            )
 
         data = resp.json()
         results = data.get("results", [])
