@@ -8,7 +8,8 @@ partagés entre projets (source unique, pas de duplication).
 | `EntreprisesClient` | recherche-entreprises.api.gouv.fr (identité, dirigeants, finances) | — |
 | `InpiClient` | INPI/BCE (bilans, ratios) | — |
 | `BodaccClient` | BODACC (créations, ventes, procédures collectives) | — |
-| `DvfClient` | DVF Etalab (transactions immobilières, comparables) | — |
+| `BoampClient` | BOAMP (avis de marchés publics, DILA OpenDataSoft) | — |
+| `DvfClient` | DVF+ Cerema (transactions immobilières, comparables, depuis 2014) | — |
 | `SireneClient` | INSEE Sirene (SIRET, siège) | `SIRENE_API_KEY` (env) |
 | `BdTopoClient` | IGN BDTOPO V3 via WFS (bâti existant d'une parcelle : emprise au sol, CES réel, usages, hauteurs) | — |
 | `SitadelClient` | Sit@del SDES/DiDo (permis de construire/aménager, demandeurs SIREN) — fichiers nationaux à pré-fetcher, pas d'API query-able | — |
