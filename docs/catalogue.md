@@ -94,3 +94,12 @@ Repérés via le MCP data.gouv.fr (2026-06-24), par ordre d'intérêt :
 | **BANCO** | Base Nationale des Commerces Ouverte | commerces géolocalisés (OSM) → prospection locale | dump |
 | **BDNB** | Base nationale des bâtiments (CSTB) | bâti + DPE + rénovation par bâtiment → complète BDTOPO | dump |
 | DPE tertiaire / Base Carbone | ADEME DataFair | DPE bâtiments publics ; facteurs d'émission GES | API REST |
+
+---
+
+## ⚠️ Gotcha : joignabilité depuis datacenter
+
+Certaines API open data **bloquent les IP datacenter** (timeout TCP *avant* TLS — ni un souci d'URL ni d'User-Agent). Avant de brancher un connecteur, **tester l'egress depuis la box de prod**, pas seulement depuis un poste de dev.
+
+- **Bloqué** : `*.opendatasoft.com` (ex. `boamp-datadila.opendatasoft.com`) → c'est pourquoi BOAMP lit le **dump DILA** (`echanges.dila.gouv.fr`) au lieu du portail ODS.
+- **OK depuis datacenter** : DataFair ADEME (`data.ademe.fr`), Cerema (`apidf-preprod.cerema.fr`), `data.gouv.fr`, BAN (`api-adresse.data.gouv.fr`), `files.data.gouv.fr`.
