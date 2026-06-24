@@ -76,6 +76,68 @@ class GpuClient:
             return f"{ANNEXES_BASE}/{part}/{doc_id}/{nomfic}"
         return None
 
+    @staticmethod
+    def signaux(prescriptions: list[dict], informations: list[dict]) -> dict[str, Any]:
+        """Dérive des flags d'urbanisme standards des libellés bruts GPU.
+
+        Traduit prescriptions + informations (chaque item : `libelle`, opt. `texte`)
+        en signaux pertinents pour l'analyse foncière : sursis à statuer, ZAD, DUP,
+        emplacement réservé, EBC, mixité sociale, DPU, ZAC, OAP, périmètres commerce,
+        risques. Les libellés bruts sont conservés à côté — ces règles par mots-clés
+        sont heuristiques, l'appelant peut réinterpréter le texte source.
+        """
+        def _norm(s: Optional[str]) -> str:
+            return (s or "").lower()
+
+        sig: dict[str, Any] = {
+            "mixite_sociale": [],      # quotas logement social (servitude L151-15 / SMS)
+            "dpu": False,              # droit de préemption urbain
+            "dpu_renforce": False,
+            "zac": [],                 # zones d'aménagement concerté
+            "oap": [],                 # orientations d'aménagement et de programmation
+            "sursis_a_statuer": [],    # PLU en révision / permis différable — fort signal maîtrise foncière
+            "zad": [],                 # zone d'aménagement différé — maîtrise/préemption longue
+            "dup": [],                 # déclaration d'utilité publique — expropriation/projet public
+            "emplacement_reserve": [], # ER — terrain grevé pour équipement public (souvent inconstructible privé)
+            "espace_boise_classe": [], # EBC — inconstructible
+            "perimetres_commerce": [], # protection / limitation commerce-artisanat
+            "risques": [],             # aléas, PPR, bruit
+            "autres": [],
+        }
+        for item in prescriptions + informations:
+            lib = item["libelle"]
+            n = _norm(lib)
+            txt = item.get("texte") or ""
+            tag = f"{lib} [{txt}]" if txt else lib
+            if "mixite sociale" in n or "mixité sociale" in n or "logement social" in n:
+                sig["mixite_sociale"].append(tag)
+            elif "preemption" in n or "préemption" in n:
+                sig["dpu"] = True
+                if "renforce" in n or "renforcé" in n:
+                    sig["dpu_renforce"] = True
+            elif "sursis" in n and "statuer" in n:
+                sig["sursis_a_statuer"].append(lib)
+            elif "amenagement differe" in n or "aménagement différé" in n or "zad" in n.split():
+                sig["zad"].append(lib)
+            elif "emplacement reserve" in n or "emplacement réservé" in n or n.split()[:1] == ["er"]:
+                sig["emplacement_reserve"].append(lib)
+            elif "espace boise" in n or "espace boisé" in n or "ebc" in n.split():
+                sig["espace_boise_classe"].append(lib)
+            elif "utilite publique" in n or "utilité publique" in n:
+                sig["dup"].append(lib)
+            elif "zac" in n.split() or n.startswith("zac"):
+                sig["zac"].append(lib)
+            elif "oap" in n:
+                sig["oap"].append(lib)
+            elif any(k in n for k in ("commerce", "commercial", "artisanat")):
+                sig["perimetres_commerce"].append(lib)
+            elif any(k in n for k in ("alea", "aléa", "ppr", "risque", "argile", "inondation",
+                                       "sonore", "retrait", "gonflement", "sismique")):
+                sig["risques"].append(lib)
+            else:
+                sig["autres"].append(lib)
+        return sig
+
     def query_point(self, lon: float, lat: float) -> tuple[dict[str, list], list[str]]:
         """Interroge toutes les couches GPU sur le point (EPSG:4326).
 
