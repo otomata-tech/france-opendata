@@ -46,4 +46,6 @@ SireneClient().get_siret("39860733300059")      # lit SIRENE_API_KEY depuis l'en
 SireneClient(api_key="…").get_headquarters("398607333")
 ```
 
+> **Catalogue complet** (toutes les sources par domaine, vue « grosse maille » + candidats à brancher) : [`docs/catalogue.md`](docs/catalogue.md).
+
 Dépend de `requests` uniquement. Consommé par `ogic-foncier-mcp` et `oto-cli`.
