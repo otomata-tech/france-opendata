@@ -9,9 +9,14 @@ from typing import Any, Optional
 
 import requests
 
+from ._http import DEFAULT_TIMEOUT
+
 
 class BodaccClient:
     BASE_URL = "https://bodacc-datadila.opendatasoft.com/api/explore/v2.1/catalog/datasets/annonces-commerciales/records"
+
+    def __init__(self, timeout: tuple[float, float] | float = DEFAULT_TIMEOUT):
+        self.timeout = timeout
 
     def search_by_siren(
         self,
@@ -35,7 +40,7 @@ class BodaccClient:
             "where": " AND ".join(clauses),
             "order_by": "dateparution desc",
             "limit": str(min(limit, 100)),
-        })
+        }, timeout=self.timeout)
         resp.raise_for_status()
         data = resp.json()
         return {
@@ -72,7 +77,7 @@ class BodaccClient:
         if clauses:
             params["where"] = " AND ".join(clauses)
 
-        resp = requests.get(self.BASE_URL, params=params)
+        resp = requests.get(self.BASE_URL, params=params, timeout=self.timeout)
         resp.raise_for_status()
         data = resp.json()
         return {

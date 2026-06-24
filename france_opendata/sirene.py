@@ -15,6 +15,8 @@ import requests
 
 import os
 
+from ._http import DEFAULT_TIMEOUT
+
 
 EMPLOYEE_RANGES = [
     {'code': 'NN', 'label': 'Unités non employeuses', 'min': 0, 'max': 0},
@@ -61,6 +63,7 @@ class SireneClient:
         self.secret = secret or os.environ.get("SIRENE_SECRET")
         self._token = None
         self._token_expiry = None
+        self.timeout = DEFAULT_TIMEOUT
 
     def _get_headers(self) -> dict:
         """Get authorization headers."""
@@ -97,7 +100,8 @@ class SireneClient:
                 "grant_type": "client_credentials",
                 "client_id": client_id,
                 "client_secret": client_secret,
-            }
+            },
+            timeout=self.timeout,
         )
 
         if not resp.ok:
@@ -278,7 +282,8 @@ class SireneClient:
         resp = requests.get(
             f"{self.BASE_URL}/siren",
             params=query_params,
-            headers=self._get_headers()
+            headers=self._get_headers(),
+            timeout=self.timeout,
         )
 
         if not resp.ok:
@@ -298,7 +303,8 @@ class SireneClient:
         """
         resp = requests.get(
             f"{self.BASE_URL}/siren/{siren}",
-            headers=self._get_headers()
+            headers=self._get_headers(),
+            timeout=self.timeout,
         )
 
         if not resp.ok:
@@ -326,7 +332,8 @@ class SireneClient:
         resp = requests.get(
             f"{self.BASE_URL}/siret",
             params={"q": query, "nombre": 1000},
-            headers=self._get_headers()
+            headers=self._get_headers(),
+            timeout=self.timeout,
         )
 
         if not resp.ok:
@@ -394,7 +401,8 @@ class SireneClient:
         resp = requests.get(
             f"{self.BASE_URL}/siret",
             params=query_params,
-            headers=self._get_headers()
+            headers=self._get_headers(),
+            timeout=self.timeout,
         )
 
         if not resp.ok:
@@ -414,7 +422,8 @@ class SireneClient:
         """
         resp = requests.get(
             f"{self.BASE_URL}/siret/{siret}",
-            headers=self._get_headers()
+            headers=self._get_headers(),
+            timeout=self.timeout,
         )
 
         if not resp.ok:
@@ -438,7 +447,8 @@ class SireneClient:
                 "q": f"siren:{siren} AND etablissementSiege:true",
                 "nombre": 1,
             },
-            headers=self._get_headers()
+            headers=self._get_headers(),
+            timeout=self.timeout,
         )
 
         if not resp.ok:

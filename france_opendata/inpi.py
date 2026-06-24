@@ -9,9 +9,14 @@ from typing import Any, Optional
 
 import requests
 
+from ._http import DEFAULT_TIMEOUT
+
 
 class InpiClient:
     BASE_URL = "https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/ratios_inpi_bce/records"
+
+    def __init__(self, timeout: tuple[float, float] | float = DEFAULT_TIMEOUT):
+        self.timeout = timeout
 
     def list_exercises(self, siren: str) -> list[dict[str, Any]]:
         """List available annual filings for a SIREN (most recent first)."""
@@ -24,7 +29,7 @@ class InpiClient:
                 "order_by": "date_cloture_exercice desc",
                 "limit": "100",
                 "offset": str(offset),
-            })
+            }, timeout=self.timeout)
             resp.raise_for_status()
             results = resp.json().get("results", [])
             items.extend(results)
@@ -38,7 +43,7 @@ class InpiClient:
         resp = requests.get(self.BASE_URL, params={
             "where": f"siren in (\"{siren}\") and date_cloture_exercice=date'{date_cloture}'",
             "limit": "1",
-        })
+        }, timeout=self.timeout)
         resp.raise_for_status()
         results = resp.json().get("results", [])
         return results[0] if results else None
