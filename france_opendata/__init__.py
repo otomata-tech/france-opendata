@@ -3,8 +3,9 @@
 - EntreprisesClient : recherche-entreprises.api.gouv.fr (identité, dirigeants, finances) — sans clé
 - InpiClient        : INPI/BCE (bilans, ratios) — sans clé
 - BodaccClient      : BODACC (créations, ventes, procédures collectives) — sans clé
-- BoampClient       : BOAMP (avis de marchés publics, DILA OpenDataSoft) — sans clé
+- BoampClient       : BOAMP (avis de marchés publics) — parquet DuckDB via dump DILA, extra [stock]
 - DvfClient         : DVF+ Cerema (transactions immobilières, comparables, depuis 2014) — sans clé
+- DpeClient         : DPE ADEME (diagnostics perf énergétique logements, étiquettes, depuis 2021) — sans clé
 - BdTopoClient      : IGN BDTOPO V3 via WFS (bâti existant d'une parcelle) — sans clé
 - SitadelClient     : Sit@del SDES/DiDo (permis de construire/aménager) — sans clé, fichiers nationaux à pré-fetcher
 - SireneClient      : INSEE Sirene (SIRET, siège) — clé via env SIRENE_API_KEY
@@ -31,6 +32,7 @@ from .inpi import InpiClient
 from .bodacc import BodaccClient
 from .boamp import BoampClient
 from .dvf import DvfClient
+from .dpe import DpeClient
 from .bdtopo import BdTopoClient
 from .sitadel import SitadelClient
 from .georisques import GeorisquesClient
@@ -47,7 +49,7 @@ from .culture_spectacle import SpectacleClient
 from .finess import FinessClient
 from .has_essms import HasEssmsClient  # import lazy de duckdb (extra [sante]) dans _connect
 
-__all__ = ["EntreprisesClient", "SireneClient", "InpiClient", "BodaccClient", "BoampClient", "DvfClient",
+__all__ = ["EntreprisesClient", "SireneClient", "InpiClient", "BodaccClient", "BoampClient", "DvfClient", "DpeClient",
            "BdTopoClient", "SitadelClient", "GeorisquesClient",
            "EnedisClient", "BanClient", "ApiCartoClient", "PvgisClient",
            "GpuClient", "QpvClient", "InseeMelodiClient", "EpfifClient",

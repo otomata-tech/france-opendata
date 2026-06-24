@@ -17,13 +17,14 @@ donne + clé + exposition oto + statut. Le détail par client vit dans son modul
 | `sirene_stock` | stock parquet INSEE (~43 M établissements, DuckDB) | lookups/bulk/énumération exhaustive | — · extra `[stock]` |
 | `InpiClient` | INPI / BCE | bilans, ~13 ratios financiers | — |
 | `BodaccClient` | BODACC | créations, ventes, procédures collectives | — |
-| `BoampClient` | BOAMP (DILA) | avis de marchés publics | — · ⚠️ **endpoint cassé** (issue #3, OpenDataSoft bloque les IP datacenter → migrer API DILA) |
+| `BoampClient` | BOAMP (dump DILA → parquet DuckDB) | avis de marchés publics | — · extra `[stock]` (OpenDataSoft bloquait les IP datacenter → lecture du dump DILA, issue #3 résolue) |
 
 ## 2. Immobilier, foncier, cadastre — namespace oto `foncier_*`
 
 | Client | Source | Donne | Clé |
 |---|---|---|---|
 | `DvfClient` | DVF+ Cerema (depuis 2014) | transactions immobilières brutes, comparables €/m², stats commune | — |
+| `DpeClient` | DPE ADEME (DataFair, depuis 2021) | ~15 M diagnostics énergétiques géocodés BAN (étiquette A-G, conso, GES) ; tools `foncier_dpe_*` + flag `with_dpe` sur les comparables | — |
 | `BanClient` | Base Adresse Nationale | géocodage / reverse | — |
 | `ApiCartoClient` | IGN API Carto | parcelle cadastrale (point/géométrie) | — |
 | `BdTopoClient` | IGN BDTOPO V3 (WFS) | bâti d'une parcelle : emprise au sol, CES réel, hauteurs | — |
@@ -88,8 +89,7 @@ Repérés via le MCP data.gouv.fr (2026-06-24), par ordre d'intérêt :
 
 | Candidat | Source | Pourquoi | Accès |
 |---|---|---|---|
-| **DPE ADEME** ⭐ | `data.ademe.fr` DataFair (`dpe03existant`) | **15 M diagnostics géocodés BAN** (étiquette E/F/G, conso, GES, coûts) → cross-ref direct avec DVF/foncier ; ce que les API immo payantes facturent | API REST queryable, sans clé |
-| **DECP** | Données Essentielles de la Commande Publique | **vraie alternative à BOAMP** pour `fr_tenders` (issue #3) | data.gouv / API |
+| **DECP** | Données Essentielles de la Commande Publique | complément/alternative à BOAMP (commande publique structurée) | data.gouv / API |
 | **RNA** | Répertoire National des Associations (Min. Intérieur) | élargit l'univers entités au-delà des entreprises (~1,5 M assos loi 1901, + ARUP) | dump national / agrégé |
 | **BANCO** | Base Nationale des Commerces Ouverte | commerces géolocalisés (OSM) → prospection locale | dump |
 | **BDNB** | Base nationale des bâtiments (CSTB) | bâti + DPE + rénovation par bâtiment → complète BDTOPO | dump |
