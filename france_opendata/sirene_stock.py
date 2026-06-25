@@ -267,6 +267,7 @@ def search(
     sieges_only: bool = False,
     limit: int = 100,
     offset: int = 0,
+    tranche_effectifs: Optional[Iterable[str]] = None,
 ) -> list[dict[str, Any]]:
     """Recherche multi-critères. Tous les filtres sont AND.
 
@@ -282,6 +283,13 @@ def search(
         sieges_only: ne renvoie que les sièges
         limit: max 1000
         offset: pagination
+        tranche_effectifs: filtre sur la tranche d'effectif de l'ÉTABLISSEMENT
+            (codes INSEE TEFEN, match exact sur n'importe lequel de la liste).
+            Ex. ["22", "31", "32"] = 100-499 salariés. Codes : 00=0, 01=1-2,
+            02=3-5, 03=6-9, 11=10-19, 12=20-49, 21=50-99, 22=100-199, 31=200-249,
+            32=250-499, 41=500-999, 42=1000-1999, 51=2000-4999, 52=5000-9999,
+            53=10000+ (NN=non renseigné). Combiné à sieges_only=True, c'est la
+            taille de la société pour les mono-sites (siège = seul établissement).
     """
     limit = max(1, min(limit, 1000))
     offset = max(0, offset)
@@ -295,6 +303,12 @@ def search(
     if naf:
         where.append("activitePrincipaleEtablissement = ?")
         params.append(naf)
+    if tranche_effectifs:
+        codes = [str(c).strip() for c in tranche_effectifs if str(c).strip()]
+        if codes:
+            ph = ", ".join("?" * len(codes))
+            where.append(f"trancheEffectifsEtablissement IN ({ph})")
+            params.extend(codes)
     if code_commune:
         where.append("codeCommuneEtablissement = ?")
         params.append(code_commune)
