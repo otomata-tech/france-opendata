@@ -4,17 +4,17 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "france-opendata"
-version = "0.17.0"
-description = "Connecteurs Python data publique France (open data) : entreprises (Recherche Entreprises, Sirene, INPI bilans, BODACC), marchés publics (BOAMP), immobilier (DVF+ Cerema), foncier/cadastre/urbanisme (BAN, API Carto, BDTOPO, Sit@del, GPU, QPV, Géorisques, EPFIF), énergie (Enedis, PVGIS), socio-démo (INSEE Mélodi), culture, santé (FINESS, ESSMS HAS). Sans clé sauf Sirene. Détail : README."
+version = "0.18.0"
+description = "Connecteurs Python data publique France (open data) : entreprises (Recherche Entreprises, Sirene, INPI bilans, BODACC), accords collectifs d'entreprise (ACCO), marchés publics (BOAMP), immobilier (DVF+ Cerema), foncier/cadastre/urbanisme (BAN, API Carto, BDTOPO, Sit@del, GPU, QPV, Géorisques, EPFIF), énergie (Enedis, PVGIS), socio-démo (INSEE Mélodi), culture, santé (FINESS, ESSMS HAS). Sans clé sauf Sirene. Détail : README."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = ["requests>=2.31"]
 
 [project.optional-dependencies]
-# Stock local sur parquet via DuckDB : SIRENE (france_opendata.sirene_stock) ET BOAMP
-# (france_opendata.boamp lecture + boamp_ingest parsing/ingestion XML durci defusedxml).
-# Lourd, donc à la carte : `france-opendata[stock]`. Sans cet extra, seuls les clients API
-# (sans clé / clé Sirene) sont disponibles.
+# Stock local sur parquet via DuckDB : SIRENE (france_opendata.sirene_stock), BOAMP
+# (france_opendata.boamp + boamp_ingest). + parsing/crawl XML DILA durci defusedxml :
+# BOAMP et ACCO (france_opendata.acco + acco_ingest). Lourd, donc à la carte :
+# `france-opendata[stock]`. Sans cet extra, seuls les clients API sont disponibles.
 stock = ["duckdb>=1.1", "defusedxml>=0.7"]
 # Évaluations ESSMS HAS (DuckDB sur parquet distant httpfs) — france_opendata.has_essms.
 sante = ["duckdb>=1.1"]

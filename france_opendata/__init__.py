@@ -22,6 +22,7 @@
 - OpendatasoftClient: client générique Opendatasoft Explore v2.1 (tout portail ODS public)
 - FinessClient      : annuaire établissements sanitaires/médico-sociaux FINESS (data.gouv) — sans clé
 - HasEssmsClient    : évaluations ESSMS (HAS, DuckDB sur parquet) — sans clé, extra [sante]
+- acco (module)     : accords d'entreprise (base nationale des accords collectifs, DILA, depuis 09/2017) — parser `acco.parse_acco` + crawler `acco_ingest`, extra [stock] (defusedxml). Stockage/recherche au consommateur (oto-backend = PostgreSQL).
 
 Lib autonome (dépend de `requests` uniquement). Source unique partagée entre projets
 (remplace la duplication des connecteurs).
@@ -48,6 +49,8 @@ from .opendatasoft import OpendatasoftClient
 from .culture_spectacle import SpectacleClient
 from .finess import FinessClient
 from .has_essms import HasEssmsClient  # import lazy de duckdb (extra [sante]) dans _connect
+# ACCO = parser + crawler (pas de client de requête) : importer `france_opendata.acco`
+# (parse_acco) et `france_opendata.acco_ingest` directement.
 
 __all__ = ["EntreprisesClient", "SireneClient", "InpiClient", "BodaccClient", "BoampClient", "DvfClient", "DpeClient",
            "BdTopoClient", "SitadelClient", "GeorisquesClient",

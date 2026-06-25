@@ -9,6 +9,7 @@ partagés entre projets (source unique, pas de duplication).
 | `InpiClient` | INPI/BCE (bilans, ratios) | — |
 | `BodaccClient` | BODACC (créations, ventes, procédures collectives) | — |
 | `BoampClient` | BOAMP (avis de marchés publics, DILA OpenDataSoft) | — |
+| `acco` (module) | ACCO (accords d'entreprise, base nationale des accords collectifs, DILA, depuis 09/2017) — parser `acco.parse_acco` + crawler `acco_ingest`, extra `[stock]` (defusedxml). Stockage/recherche au consommateur (oto-backend = PostgreSQL). | — |
 | `DvfClient` | DVF+ Cerema (transactions immobilières, comparables, depuis 2014) | — |
 | `SireneClient` | INSEE Sirene (SIRET, siège) | `SIRENE_API_KEY` (env) |
 | `BdTopoClient` | IGN BDTOPO V3 via WFS (bâti existant d'une parcelle : emprise au sol, CES réel, usages, hauteurs) | — |
