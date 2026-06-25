@@ -11,6 +11,7 @@ système requis** ; pas de fallback silencieux).
 """
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 import tempfile
@@ -23,6 +24,24 @@ import requests
 _UA = "france-opendata/reglement"
 DEFAULT_TIMEOUT = 600
 MIN_TEXT_CHARS = 2000  # en-dessous : PDF probablement scanné (image), illisible sans OCR
+
+# `pdftotext -layout` reproduit la mise en page spatiale du PDF : pour un PLUi
+# intercommunal (sommaires à points de suite + colonnes alignées au padding), ça
+# gonfle le texte d'un facteur ~40× (98% d'espaces de remplissage), sans ajouter de
+# contenu. On dégonfle ligne-à-ligne — en GARDANT les `\n`, car les extraits sont
+# recherchés ligne par ligne côté consommateur.
+_DOTS_LEADERS = re.compile(r"\.{4,}")      # points de suite « …… » des sommaires
+_RUN_SPACES = re.compile(r"[ \t]{2,}")     # padding d'alignement -layout
+_RUN_BLANKS = re.compile(r"\n{3,}")        # rafales de lignes vides
+
+
+def _normalize_layout(text: str) -> str:
+    """Dégonfle la sortie `pdftotext -layout` (cf. note ci-dessus). Idempotent."""
+    lines = (
+        _RUN_SPACES.sub(" ", _DOTS_LEADERS.sub("…", line)).strip()
+        for line in text.split("\n")
+    )
+    return _RUN_BLANKS.sub("\n\n", "\n".join(lines))
 
 # Exceptions réseau transitoires → on reprend ; les erreurs HTTP (4xx/5xx) propagent direct.
 _RETRYABLE = (requests.ConnectionError, requests.Timeout,
@@ -79,7 +98,8 @@ def download_pdf(url: str, dest: Union[str, Path], *, max_attempts: int = 6,
 
 
 def parse_pdf(source: Union[str, Path, bytes]) -> dict:
-    """Extrait le texte d'un PDF de règlement via `pdftotext -layout`.
+    """Extrait le texte d'un PDF de règlement via `pdftotext -layout`, puis dégonfle la
+    mise en page (`_normalize_layout` : points de suite, padding, lignes vides en rafale).
 
     `source` = chemin du PDF ou contenu en bytes. Renvoie `{text, chars, scanne_probable}` ;
     `scanne_probable`=True si < `MIN_TEXT_CHARS` extraits (PDF image, illisible sans OCR)."""
@@ -90,7 +110,7 @@ def parse_pdf(source: Union[str, Path, bytes]) -> dict:
     else:
         proc = subprocess.run([exe, "-layout", str(source), "-"],
                               capture_output=True, check=True)
-    text = proc.stdout.decode("utf-8", errors="replace")
+    text = _normalize_layout(proc.stdout.decode("utf-8", errors="replace"))
     chars = len(text)
     return {"text": text, "chars": chars, "scanne_probable": chars < MIN_TEXT_CHARS}
 
