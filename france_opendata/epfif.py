@@ -89,18 +89,24 @@ def parse(html: str) -> dict[str, Any]:
 
 
 class EpfifClient:
-    """Client EPFIF — fetch live de la page cartographie + cache TTL. Sans clé.
+    """Client EPFIF — sans clé, Île-de-France uniquement. Deux modes :
 
-    Île-de-France uniquement. Le premier appel déclenche le fetch+parse ; les suivants
-    servent le cache jusqu'à expiration du TTL.
+    - **index injecté** (`EpfifClient(index=<dict>)`) : sert un index statique pré-fetché
+      (sortie de `parse`), **ne scrape JAMAIS** — instantané, offline, version-pinné.
+      Mode recommandé en production (cf. OGIC : index committé rafraîchi au build).
+    - **live** (défaut) : le premier appel fetch+parse la page cartographie, cache TTL ;
+      dégrade sur le dernier cache valide si la source casse.
     """
 
-    def __init__(self, ttl_seconds: int = DEFAULT_TTL, timeout: int = TIMEOUT):
+    def __init__(self, ttl_seconds: int = DEFAULT_TTL, timeout: int = TIMEOUT,
+                 index: Optional[dict] = None):
         self._ttl = ttl_seconds
         self._timeout = timeout
-        self._session = requests.Session()
-        self._session.headers.update({"User-Agent": "france-opendata/epfif"})
-        self._cache: Optional[dict] = None
+        self._static = index  # si fourni : index statique, aucun accès réseau
+        self._session = None if index is not None else requests.Session()
+        if self._session is not None:
+            self._session.headers.update({"User-Agent": "france-opendata/epfif"})
+        self._cache: Optional[dict] = index
         self._cached_at: float = 0.0
         self._stale: bool = False  # dernier refresh dégradé (fetch/parse KO)
 
@@ -110,7 +116,10 @@ class EpfifClient:
         return resp.text
 
     def _index(self) -> dict:
-        """Index courant, rafraîchi si périmé. Dégrade sur le dernier cache valide."""
+        """Index courant. En mode statique : l'index injecté, sans jamais fetch.
+        En mode live : rafraîchi si périmé, dégrade sur le dernier cache valide."""
+        if self._static is not None:
+            return self._static
         fresh = self._cache is not None and (time.monotonic() - self._cached_at) < self._ttl
         if fresh:
             return self._cache
