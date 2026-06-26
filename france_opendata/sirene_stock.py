@@ -20,12 +20,20 @@ de SIREN, utiliser `lookup_sieges`/`headquarters_addresses` (UN seul scan, pas N
 
 Retours = dicts snake_case (depuis les camelCase INSEE), NULLs explicites.
 
+Durcissement (ADR 0028) : toute lecture passe par `_query`, sous double garde
+concurrence + timeout DUR (un scan lent ne peut plus geler un serveur co-localisé,
+ex. oto-mcp). Tunables par env : `SIRENE_STOCK_MAX_CONCURRENCY` (scans en vol, déf.
+2), `SIRENE_STOCK_MAX_INFLIGHT` (total actifs+attente, déf. 8), `SIRENE_STOCK_
+QUERY_TIMEOUT_S` (déf. 90), `SIRENE_STOCK_ACQUIRE_TIMEOUT_S` (déf. 30). Saturation →
+`StockOverloaded` ; dépassement du timeout → `StockQueryTimeout`.
+
 Nécessite l'extra : `france-opendata[stock]` (duckdb).
 """
 from __future__ import annotations
 
 import datetime as _dt
 import os
+import threading
 from typing import Any, Iterable, Optional
 
 import duckdb
@@ -36,6 +44,94 @@ DEFAULT_PATH = "/opt/oto-mcp/data/sirene/StockEtablissement.parquet"
 
 def parquet_path() -> str:
     return os.environ.get("SIRENE_STOCK_PARQUET_PATH", DEFAULT_PATH)
+
+
+# --- Durcissement intérimaire (ADR 0028) ------------------------------------
+# Un scan parquet est structurellement lourd (`LIMIT` après `ORDER BY` → balayage
+# intégral) et, en cold-S3, peut dépasser 300 s. Co-localisé in-process avec un
+# serveur réactif (oto-mcp), une rafale de scans concurrents sature le threadpool
+# et gèle la box (incident 2026-06-25). Tant que FOD n'est pas extrait sur sa box
+# dédiée, on borne ici, à la source partagée, deux choses :
+#   - la CONCURRENCE : N scans réellement en vol max + plafond du total en attente
+#     (anti-saturation threadpool) ;
+#   - la DURÉE : timeout DUR par requête (watchdog `conn.interrupt()`).
+# Tunables par env, défauts pensés pour une box ~4 vCPU qui doit rester réactive.
+
+def _env_int(name: str, default: int) -> int:
+    try:
+        return max(1, int(os.environ[name]))
+    except (KeyError, ValueError):
+        return default
+
+
+def _env_float(name: str, default: float) -> float:
+    try:
+        return max(0.1, float(os.environ[name]))
+    except (KeyError, ValueError):
+        return default
+
+
+_MAX_CONCURRENCY = _env_int("SIRENE_STOCK_MAX_CONCURRENCY", 2)
+_MAX_INFLIGHT = _env_int("SIRENE_STOCK_MAX_INFLIGHT", 8)
+_QUERY_TIMEOUT_S = _env_float("SIRENE_STOCK_QUERY_TIMEOUT_S", 90.0)
+_ACQUIRE_TIMEOUT_S = _env_float("SIRENE_STOCK_ACQUIRE_TIMEOUT_S", 30.0)
+
+# Total des requêtes stock en vol (actives + en attente d'un slot de scan) :
+# acquis NON bloquant → rejet immédiat qui rend la main au thread, évite
+# d'empiler des waiters et de noyer le threadpool de l'appelant.
+_INFLIGHT_SEM = threading.BoundedSemaphore(max(_MAX_INFLIGHT, _MAX_CONCURRENCY))
+# Scans réellement exécutés en parallèle (CPU/IO).
+_SCAN_SEM = threading.BoundedSemaphore(_MAX_CONCURRENCY)
+
+
+class StockOverloaded(RuntimeError):
+    """Trop de requêtes stock simultanées — plafond de concurrence atteint."""
+
+
+class StockQueryTimeout(RuntimeError):
+    """Requête stock interrompue par le watchdog (scan trop long)."""
+
+
+def _query(sql: str, params: Optional[list[Any]] = None, *, fetch: str) -> Any:
+    """Exécute une requête DuckDB sous double garde concurrence + timeout DUR.
+
+    Toutes les lectures du parquet passent par ici. `fetch` ∈ {"all", "one"}.
+    Lève `StockOverloaded` (saturé) ou `StockQueryTimeout` (scan trop long).
+    """
+    if not _INFLIGHT_SEM.acquire(blocking=False):
+        raise StockOverloaded(
+            f"SIRENE stock saturé ({_MAX_INFLIGHT} requêtes déjà en vol). "
+            "Réessayez dans un instant."
+        )
+    try:
+        if not _SCAN_SEM.acquire(timeout=_ACQUIRE_TIMEOUT_S):
+            raise StockOverloaded(
+                f"SIRENE stock occupé ({_MAX_CONCURRENCY} scans en cours), "
+                f"attente dépassée ({_ACQUIRE_TIMEOUT_S:.0f} s). Réessayez."
+            )
+        try:
+            with _connect() as conn:
+                watchdog = threading.Timer(_QUERY_TIMEOUT_S, conn.interrupt)
+                watchdog.start()
+                try:
+                    cur = conn.execute(sql, params or [])
+                    if fetch == "all":
+                        return cur.fetchall()
+                    if fetch == "one":
+                        return cur.fetchone()
+                    raise ValueError(f"fetch invalide: {fetch!r}")
+                except duckdb.InterruptException as e:
+                    raise StockQueryTimeout(
+                        f"Requête SIRENE stock interrompue après "
+                        f"{_QUERY_TIMEOUT_S:.0f} s (scan trop lourd) — affinez les "
+                        "filtres (commune, NAF, département)."
+                    ) from e
+                finally:
+                    watchdog.cancel()
+        finally:
+            _SCAN_SEM.release()
+    finally:
+        _INFLIGHT_SEM.release()
 
 
 # Colonnes parquet INSEE → snake_case stable côté API.
@@ -124,9 +220,28 @@ def _connect() -> duckdb.DuckDBPyConnection:
     return conn
 
 
+def _is_partitioned() -> bool:
+    """Le path désigne-t-il un dataset Hive partitionné par dept (un DOSSIER local,
+    produit par le build FOD) plutôt qu'un fichier .parquet unique ?
+
+    Local + ne finit pas par `.parquet` ⟹ dossier partitionné `dept=NN/…`. Un
+    chemin distant (s3://, https://) ou un fichier `.parquet` reste mono-fichier.
+    """
+    p = parquet_path()
+    return not _is_remote(p) and not p.endswith(".parquet")
+
+
 def _from_parquet() -> str:
-    """Clause FROM pointant le parquet — quoté/échappé via DuckDB."""
-    return f"read_parquet('{parquet_path()}')"
+    """Clause FROM pointant le parquet — fichier unique OU dataset partitionné.
+
+    En mode partitionné, lit le glob Hive `dept=NN/*.parquet` avec
+    `hive_partitioning` → la colonne `dept` devient un prédicat de pruning (un
+    filtre `dept = '13'` ne lit que la partition concernée). La colonne `dept`
+    n'est PAS exposée en sortie (le SELECT reste sur `_COLUMN_MAP`)."""
+    p = parquet_path()
+    if _is_partitioned():
+        return f"read_parquet('{p}/**/*.parquet', hive_partitioning=true)"
+    return f"read_parquet('{p}')"
 
 
 def _row_to_dict(row: tuple, columns: list[str]) -> dict[str, Any]:
@@ -161,8 +276,7 @@ def lookup_siege(siren: str) -> Optional[dict[str, Any]]:
         "ORDER BY dateDebut DESC NULLS LAST "
         "LIMIT 1"
     )
-    with _connect() as conn:
-        row = conn.execute(sql, [siren]).fetchone()
+    row = _query(sql, [siren], fetch="one")
     return _row_to_dict(row, _output_columns()) if row else None
 
 
@@ -183,8 +297,7 @@ def lookup_sieges(sirens: Iterable[str]) -> dict[str, dict[str, Any]]:
         "QUALIFY ROW_NUMBER() OVER "
         "(PARTITION BY siren ORDER BY dateDebut DESC NULLS LAST) = 1"
     )
-    with _connect() as conn:
-        rows = conn.execute(sql, uniq).fetchall()
+    rows = _query(sql, uniq, fetch="all")
     cols = _output_columns()
     out: dict[str, dict[str, Any]] = {}
     for r in rows:
@@ -239,8 +352,7 @@ def list_establishments(siren: str, active_only: bool = True) -> list[dict[str, 
         f"WHERE {' AND '.join(where)} "
         "ORDER BY etablissementSiege DESC, dateDebut DESC NULLS LAST"
     )
-    with _connect() as conn:
-        rows = conn.execute(sql, params).fetchall()
+    rows = _query(sql, params, fetch="all")
     cols = _output_columns()
     return [_row_to_dict(r, cols) for r in rows]
 
@@ -251,8 +363,7 @@ def lookup_siret(siret: str) -> Optional[dict[str, Any]]:
         f"SELECT {_SELECT_CLAUSE} FROM {_from_parquet()} "
         "WHERE siret = ? LIMIT 1"
     )
-    with _connect() as conn:
-        row = conn.execute(sql, [siret]).fetchone()
+    row = _query(sql, [siret], fetch="one")
     return _row_to_dict(row, _output_columns()) if row else None
 
 
@@ -316,6 +427,13 @@ def search(
         where.append("codePostalEtablissement = ?")
         params.append(code_postal)
     if departement:
+        # Prédicat de pruning sur la colonne de partition (dataset FOD) : `dept`
+        # = 2 premiers chars du code postal → DuckDB ne lit que cette partition.
+        # Inopérant/absent en mono-fichier (pas de colonne `dept`) → gardé.
+        if _is_partitioned():
+            where.append("dept = ?")
+            params.append(departement[:2])
+        # Filtre fin conservé pour la précision (DOM = préfixe 3 chars).
         where.append("LEFT(codePostalEtablissement, ?) = ?")
         params.extend([len(departement), departement])
     if denomination:
@@ -338,8 +456,7 @@ def search(
     )
     params.extend([limit, offset])
 
-    with _connect() as conn:
-        rows = conn.execute(sql, params).fetchall()
+    rows = _query(sql, params, fetch="all")
     cols = _output_columns()
     return [_row_to_dict(r, cols) for r in rows]
 
@@ -347,8 +464,7 @@ def search(
 def count_active() -> int:
     """Comptage rapide pour sanity check / monitoring."""
     sql = f"SELECT COUNT(*) FROM {_from_parquet()} WHERE etatAdministratifEtablissement = 'A'"
-    with _connect() as conn:
-        return int(conn.execute(sql).fetchone()[0])
+    return int(_query(sql, fetch="one")[0])
 
 
 def parquet_info() -> dict[str, Any]:
@@ -367,7 +483,7 @@ def parquet_info() -> dict[str, Any]:
             return info
     try:
         info["total_rows"] = int(
-            _connect().execute(f"SELECT COUNT(*) FROM {_from_parquet()}").fetchone()[0]
+            _query(f"SELECT COUNT(*) FROM {_from_parquet()}", fetch="one")[0]
         )
     except Exception as e:
         info["query_error"] = str(e)
