@@ -367,6 +367,26 @@ def lookup_siret(siret: str) -> Optional[dict[str, Any]]:
     return _row_to_dict(row, _output_columns()) if row else None
 
 
+def _dept_partition(departement: Optional[str], code_postal: Optional[str]) -> Optional[str]:
+    """Valeur de la colonne de partition `dept` (= LEFT(code_postal, 2)) à pruner.
+
+    Priorité au `departement` explicite (DOM "971" → partition "97"), sinon
+    dérivée du `code_postal` (préfixe 2 chars, EXACT car la partition EST ce
+    préfixe). None si aucun critère exploitable.
+
+    Volontairement PAS dérivée de `code_commune` (code INSEE) : des communes
+    frontalières portent un code postal rattaché à un dept VOISIN → pruner sur le
+    préfixe du code commune écarterait des établissements réels (faux négatifs).
+    """
+    if departement and departement[:2].strip():
+        return departement[:2]
+    if code_postal:
+        cp = code_postal.strip()
+        if len(cp) >= 2 and cp[:2].isdigit():
+            return cp[:2]
+    return None
+
+
 def search(
     naf: Optional[str] = None,
     code_commune: Optional[str] = None,
@@ -427,15 +447,21 @@ def search(
         where.append("codePostalEtablissement = ?")
         params.append(code_postal)
     if departement:
-        # Prédicat de pruning sur la colonne de partition (dataset FOD) : `dept`
-        # = 2 premiers chars du code postal → DuckDB ne lit que cette partition.
-        # Inopérant/absent en mono-fichier (pas de colonne `dept`) → gardé.
-        if _is_partitioned():
-            where.append("dept = ?")
-            params.append(departement[:2])
-        # Filtre fin conservé pour la précision (DOM = préfixe 3 chars).
+        # Filtre fin sur le préfixe du code postal (DOM = préfixe 3 chars).
         where.append("LEFT(codePostalEtablissement, ?) = ?")
         params.extend([len(departement), departement])
+
+    # Pruning de partition (dataset FOD partitionné par `dept` = LEFT(code_postal,2)).
+    # Dérivé du critère localisant — departement explicite, sinon CODE POSTAL — pour
+    # qu'une recherche par code postal ne scanne plus les 43M lignes (avant : seul
+    # `departement` prunait → un `code_postal` seul = full-scan jusqu'au watchdog 90s).
+    # Exact : la partition EST le préfixe 2 chars du code postal, déjà filtré exact
+    # ci-dessus. Inopérant/absent en mono-fichier (pas de colonne `dept`) → gardé.
+    if _is_partitioned():
+        dept_part = _dept_partition(departement, code_postal)
+        if dept_part:
+            where.append("dept = ?")
+            params.append(dept_part)
     if denomination:
         where.append("LOWER(denominationUsuelleEtablissement) LIKE ?")
         params.append(f"%{denomination.lower()}%")

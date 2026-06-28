@@ -105,3 +105,36 @@ def test_search_no_dept_predicate_when_single_file(monkeypatch):
     monkeypatch.setattr(ss, "_query", lambda sql, params=None, *, fetch: captured.update(sql=sql) or [])
     ss.search(departement="13", limit=10)
     assert "dept = ?" not in captured["sql"]  # pas de colonne dept en mono-fichier
+
+
+def test_search_code_postal_prunes_partition(monkeypatch):
+    # Une recherche par CODE POSTAL seul (sans departement) doit pruner la
+    # partition `dept` dérivée du préfixe 2 chars — plus de full-scan des 43M lignes.
+    monkeypatch.setattr(ss, "parquet_path", lambda: "/data/sirene/partitioned")
+    captured = {}
+    monkeypatch.setattr(ss, "_query",
+                        lambda sql, params=None, *, fetch: captured.update(sql=sql, params=params) or [])
+    ss.search(code_postal="13001", limit=10)
+    assert "dept = ?" in captured["sql"]
+    assert "13" in captured["params"]
+
+
+def test_search_code_commune_does_not_prune(monkeypatch):
+    # Pas de pruning dérivé de la commune INSEE (communes frontalières à code
+    # postal d'un dept voisin → risque d'écarter des établissements).
+    monkeypatch.setattr(ss, "parquet_path", lambda: "/data/sirene/partitioned")
+    captured = {}
+    monkeypatch.setattr(ss, "_query",
+                        lambda sql, params=None, *, fetch: captured.update(sql=sql, params=params) or [])
+    ss.search(code_commune="13201", limit=10)
+    assert "dept = ?" not in captured["sql"]
+
+
+def test_dept_partition_helper():
+    assert ss._dept_partition("13", None) == "13"       # departement explicite
+    assert ss._dept_partition("971", None) == "97"      # DOM 3 chars → partition 2 chars
+    assert ss._dept_partition(None, "13001") == "13"    # dérivé du code postal
+    assert ss._dept_partition(None, "97400") == "97"    # DOM
+    assert ss._dept_partition(None, None) is None
+    assert ss._dept_partition(None, "  ") is None        # code postal vide → pas de pruning
+    assert ss._dept_partition("13", "75002") == "13"    # departement prioritaire
