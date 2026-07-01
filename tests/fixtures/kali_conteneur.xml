@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<IDCC>
+<META>
+<META_COMMUN>
+<ID>KALICONT000005635507</ID>
+<ANCIEN_ID/>
+<ORIGINE>KALI</ORIGINE>
+<URL>conteneur/KALI/CONT/00/00/05/63/55/KALICONT000005635507.xml</URL>
+<NATURE>IDCC</NATURE>
+</META_COMMUN>
+<META_SPEC>
+<META_CONTENEUR>
+<TITRE>Convention collective nationale des fleuristes, de la vente et des services des animaux familiers du 21 janvier 1997, étendue par arrêté du 7 octobre 1997 JORF 21 octobre 1997- Actualisée par accord du 29 septembre 2020, étendue par arrêté du 17 décembre 2021 JORF 23 décembre 2021</TITRE>
+<ETAT>VIGUEUR_ETEN</ETAT>
+<NUM>1978</NUM>
+
+<DATE_PUBLI>2021-12-24</DATE_PUBLI>
+</META_CONTENEUR>
+<DESCRIPTION_FUSION>
+<CONTENU/>
+</DESCRIPTION_FUSION>
+</META_SPEC>
+</META>
+<STRUCTURE_TXT>
+<TM niv="1">
+<TITRE_TM>Texte de base</TITRE_TM>
+<LIEN_TXT idtxt="KALITEXT000005668583" titretxt="Convention collective nationale du 21 janvier 1997"/>
+<LIEN_TXT idtxt="KALITEXT000043234383" titretxt="Convention collective nationale du 29 septembre 2020"/>
+</TM>
+<TM niv="1">
+<TITRE_TM>Textes Attachés</TITRE_TM>
+<LIEN_TXT idtxt="KALITEXT000005668587" titretxt="Retraite complémentaire"/>
+<LIEN_TXT idtxt="KALITEXT000005668601" titretxt="Fonds d'assurance formation"/>
+<LIEN_TXT idtxt="KALITEXT000005668593" titretxt="Emplois et classification"/>
+<LIEN_TXT idtxt="KALITEXT000005668595" titretxt="Accord du 8 avril 1994 relatif aux emplois et classifications."/>
+<LIEN_TXT idtxt="KALITEXT000005668589" titretxt="Indemnisation maladie, régime de prévoyance"/>
+<LIEN_TXT idtxt="KALITEXT000005668597" titretxt="Application de l'accord national du 8 avril 1994 relatif aux emplois et classifications."/>
+<LIEN_TXT idtxt="KALITEXT000005668599" titretxt="Prime d'ancienneté"/>
+<LIEN_TXT idtxt="KALITEXT000005668603" titretxt="Création d'une commission paritaire nationale de l'emploi et de la formation professionnelle"/>
+<LIEN_TXT idtxt="KALITEXT000005668591" titretxt="Prévoyance"/>
+<LIEN_TXT idtxt="KALITEXT000005668605" titretxt="Adhésion du secteur des animaux familiers à l'AGEFOS-PME"/>
+<LIEN_TXT idtxt="KALITEXT000005668613" titretxt="Création d'un fonds de financement du paritarisme"/>
+<LIEN_TXT idtxt="KALITEXT000005668615" titretxt="Réduction et aménagement du temps de travail"/>
+<LIEN_TXT idtxt="KALITEXT000019906595" titretxt="Avenant relatif aux accords antérieurs"/>
+<LIEN_TXT idtxt="KALITEXT000019906599" titretxt="Prévoyance complémentaire"/>
+<LIEN_TXT idtxt="KALITEXT000005668619" titretxt="Travail à temps partiel"/>
+<LIEN_TXT idtxt="KALITEXT000005668607" titretxt="Création d'un certificat de qualification professionnelle de vendeur en animalerie"/>
+<LIEN_TXT idtxt="KALITEXT000005668609" titretxt="CQP « Responsable de magasin »"/>
+<LIEN_TXT idtxt="KALITEXT000005668611" titretxt="CQP « Adjoint au responsable du magasin ou chef de rayon » "/>
+<LIEN_TXT idtxt="KALITEXT000005668617" titretxt="Avenant à l'accord ARTT du 13 juin 2000"/>
+<LIEN_TXT idtxt="KALITEXT000005668621" titretxt="Avenant à l'accord prévoyance du 9 décembre 1997 portant des modifications"/>
+<LIEN_TXT idtxt="KALITEXT000005668623" titretxt="Mise en place d'une commission paritaire santé au travail et prévention des risques professionnels (CPNSTRP)"/>
+<LIEN_TXT idtxt="KALITEXT000005668625" titretxt="Avenant à l'accord prévoyance du 9 décembre 1997 relatif à la rente éducation"/>
+<LIEN_TXT idtxt="KALITEXT000005668627" titretxt="Adhésion de la CGT à l'avenant du 13 juin 2000 portant création d'un fonds de financement du paritarisme"/>
+<LIEN_TXT idtxt="KALITEXT000005668629" titretxt="Avenant à l'accord ARTT du 13 juin 2000"/>
+<LIEN_TXT idtxt="KALITEXT000005668631" titretxt="Apprentissage"/>
+<LIEN_TXT idtxt="KALITEXT000005668633" titretxt="Lettre d'adhésion de la fédération des commerces et des services UNSA à la convention collective nationale des fleuristes, vente et services des animaux familiers"/>
+<LIEN_TXT idtxt="KALITEXT000005668635" titretxt="Formation professionnelle"/>
+<LIEN_TXT idtxt="KALITEXT000005668637" titretxt="Avenant à l'accord du 9 décembre 1997 relatif à la prévoyance"/>
+<LIEN_TXT idtxt="KALITEXT000005668639" titretxt="Modification de certains articles"/>
+<LIEN_TXT idtxt="KALITEXT000005668641" titretxt="Avenant à l'accord du 13 juin 2000 relatif à la création d'un fonds de financement du paritarisme"/>
+<LIEN_TXT idtxt="KALITEXT000005668643" titretxt="Avenant à l'accord du 5 juillet 2005 relatif à la formation professionnelle"/>
+<LIEN_TXT idtxt="KALITEXT000017579913" titretxt="Lettre d'adhésion de la CGT à l'avenant n 1 du 20 octobre 2006"/>
+<LIEN_TXT idtxt="KALITEXT000018562875" titretxt="Modification accord CPNEFP du 25 septembre 1997"/>
+<LIEN_TXT idtxt="KALITEXT000019022230" titretxt="Réduction et à aménagement du temps de travail"/>
+<LIEN_TXT idtxt="KALITEXT000020898479" titretxt="Paritarisme"/>
+<LIEN_TXT idtxt="KALITEXT000021029493" titretxt="Prévoyance"/>
+<LIEN_TXT idtxt="KALITEXT000021802445" titretxt="Classifications professionnelles"/>
+<LIEN_TXT idtxt="KALITEXT000021944550" titretxt="Prévoyance"/>
+<LIEN_TXT idtxt="KALITEXT000021944565" titretxt="Prévoyance"/>
+<LIEN_TXT idtxt="KALITEXT000021980167" titretxt="Emploi des seniors"/>
+<LIEN_TXT idtxt="KALITEXT000022017920" titretxt="Champ d'application"/>
+<LIEN_TXT idtxt="KALITEXT000022017943" titretxt="Repos hebdomadaire"/>
+<LIEN_TXT idtxt="KALITEXT000022839840" titretxt="Egalité professionnelle entre les femmes et les hommes"/>
+<LIEN_TXT idtxt="KALITEXT000023375105" titretxt="Prévoyance"/>
+<LIEN_TXT idtxt="KALITEXT000023589792" titretxt="Formation professionnelle"/>
+<LIEN_TXT idtxt="KALITEXT000023590233" titretxt="Prévoyance"/>
+<LIEN_TXT idtxt="KALITEXT000023759060" titretxt="Classification de personnel détenteur d'un brevet de maîtrise de fleuriste"/>
+<LIEN_TXT idtxt="KALITEXT000023801230" titretxt="Formation professionnelle"/>
+<LIEN_TXT idtxt="KALITEXT000023950132" titretxt="Création d'un CQP « Vendeur en animalerie »"/>
+<LIEN_TXT idtxt="KALITEXT000024401229" titretxt="Régime frais de santé"/>
+<LIEN_TXT idtxt="KALITEXT000024401278" titretxt="Avenant à l'accord du 9 décembre 1997 relatif à la prévoyance"/>
+<LIEN_TXT idtxt="KALITEXT000024891902" titretxt="FFATA"/>
+<LIEN_TXT idtxt="KALITEXT000024891909" titretxt="PRESTANIMALIA"/>
+<LIEN_TXT idtxt="KALITEXT000024977768" titretxt="SYNAPSES"/>
+<LIEN_TXT idtxt="KALITEXT000025052766" titretxt="Diversité et égalité des chances"/>
+<LIEN_TXT idtxt="KALITEXT000025591234" titretxt="Désignation de l'OPCA"/>
+<LIEN_TXT idtxt="KALITEXT000025627328" titretxt="Frais de santé"/>
+<LIEN_TXT idtxt="KALITEXT000025627338" titretxt="Champ d'application"/>
+<LIEN_TXT idtxt="KALITEXT000026356574" titretxt="Composition et fonctionnement de la commission paritaire"/>
+<LIEN_TXT idtxt="KALITEXT000026356606" titretxt="Paritarisme"/>
+<LIEN_TXT idtxt="KALITEXT000026695832" titretxt="Frais de santé"/>
+<LIEN_TXT idtxt="KALITEXT000026695882" titretxt="Classifications"/>
+<LIEN_TXT idtxt="KALITEXT000027291960" titretxt="Financement du paritarisme"/>
+<LIEN_TXT idtxt="KALITEXT000027627621" titretxt="Prévoyance"/>
+<LIEN_TXT idtxt="KALITEXT000027751031" titretxt="Prévoyance"/>
+<LIEN_TXT idtxt="KALITEXT000027886531" titretxt="Création d'un CQP « Vendeur en animalerie »"/>
+<LIEN_TXT idtxt="KALITEXT000027886547" titretxt="Classifications"/>
+<LIEN_TXT idtxt="KALITEXT000027886555" titretxt="Fonds d'action sociale"/>
+<LIEN_TXT idtxt="KALITEXT000028216945" titretxt="Frais de santé"/>
+<LIEN_TXT idtxt="KALITEXT000028319328" titretxt="Prévoyance"/>
+<LIEN_TXT idtxt="KALITEXT000029149193" titretxt="Prévoyance"/>
+<LIEN_TXT idtxt="KALITEXT000029358524" titretxt="Insertion et maintien dans l'emploi des personnes handicapées"/>
+<LIEN_TXT idtxt="KALITEXT000029358544" titretxt="Frais de soins de santé"/>
+<LIEN_TXT idtxt="KALITEXT000030429186" titretxt="Frais de santé"/>
+<LIEN_TXT idtxt="KALITEXT000030440789" titretxt="Travail de nuit"/>
+<LIEN_TXT idtxt="KALITEXT000031915666" titretxt="Gestion prévisionnelle des emplois et des compétences (GPEC)"/>
+<LIEN_TXT idtxt="KALITEXT000031985464" titretxt="Contrat de génération"/>
+<LIEN_TXT idtxt="KALITEXT000033028499" titretxt="Champ d'application professionnel"/>
+<LIEN_TXT idtxt="KALITEXT000033225309" titretxt="Régime de prévoyance"/>
+<LIEN_TXT idtxt="KALITEXT000033225367" titretxt="Classifications professionnelles"/>
+<LIEN_TXT idtxt="KALITEXT000033685425" titretxt="Contrat de génération"/>
+<LIEN_TXT idtxt="KALITEXT000033685451" titretxt="Classifications professionnelles"/>
+<LIEN_TXT idtxt="KALITEXT000033926540" titretxt="Classifications  professionnelles"/>
+<LIEN_TXT idtxt="KALITEXT000033926548" titretxt="Création d'un CQP « Assistant fleuriste »"/>
+<LIEN_TXT idtxt="KALITEXT000033926564" titretxt="Reprise du personnel en cas de changement de prestataire dans les activités de refuges et fourrières"/>
+<LIEN_TXT idtxt="KALITEXT000034475716" titretxt="Frais de santé"/>
+<LIEN_TXT idtxt="KALITEXT000035657847" titretxt="Création d'un CQP « Assistant fleuriste »"/>
+<LIEN_TXT idtxt="KALITEXT000035779251" titretxt="Formation professionnelle"/>
+<LIEN_TXT idtxt="KALITEXT000035779326" titretxt="Egalité professionnelle entre les femmes et les hommes"/>
+<LIEN_TXT idtxt="KALITEXT000035980535" titretxt="Prime d'ancienneté (art. 9.2)"/>
+<LIEN_TXT idtxt="KALITEXT000036835668" titretxt="Classifications professionnelles"/>
+<LIEN_TXT idtxt="KALITEXT000037041180" titretxt="Mise en place de la CPPNI"/>
+<LIEN_TXT idtxt="KALITEXT000037808258" titretxt="Fonds de financement du paritarisme"/>
+<LIEN_TXT idtxt="KALITEXT000037808284" titretxt="Rectificatif relatif à la création d'un fonds du financement du paritarisme"/>
+<LIEN_TXT idtxt="KALITEXT000037808297" titretxt="Modification de l'accord du 3 juillet 2012 (frais de santé)"/>
+<LIEN_TXT idtxt="KALITEXT000037808324" titretxt="Rectificatif relatif à la mise en place de la CPPNI"/>
+<LIEN_TXT idtxt="KALITEXT000038073474" titretxt="Adhésion par lettre du PRODAF"/>
+<LIEN_TXT idtxt="KALITEXT000038283171" titretxt="Prévoyance"/>
+<LIEN_TXT idtxt="KALITEXT000039109358" titretxt="Secteur d'activité économique de référence"/>
+<LIEN_TXT idtxt="KALITEXT000038632481" titretxt="CQP animalier-gardien d'animaux"/>
+<LIEN_TXT idtxt="KALITEXT000038524212" titretxt="Prévention de la pénibilité"/>
+<LIEN_TXT idtxt="KALITEXT000038524240" titretxt="Utilisation des contrats courts"/>
+<LIEN_TXT idtxt="KALITEXT000038524247" titretxt="Formation professionnelle (CQP)"/>
+<LIEN_TXT idtxt="KALITEXT000038655212" titretxt="Niveau de prise en charge des diplômes et certifications préparés en apprentissage"/>
+<LIEN_TXT idtxt="KALITEXT000039109381" titretxt="OPCO des entreprises de proximité"/>
+<LIEN_TXT idtxt="KALITEXT000039116807" titretxt="CQP « Vendeur en animalerie »"/>
+<LIEN_TXT idtxt="KALITEXT000039406942" titretxt="Classifications professionnelles"/>
+<LIEN_TXT idtxt="KALITEXT000041405344" titretxt="Classifications professionnelles"/>
+<LIEN_TXT idtxt="KALITEXT000042531263" titretxt="Modification de l'accord du 3 juillet 2012 (frais de santé)"/>
+<LIEN_TXT idtxt="KALITEXT000042312929" titretxt="Promotion ou conversion par alternance « Pro-A »"/>
+<LIEN_TXT idtxt="KALITEXT000042312950" titretxt="Modification de l'accord du 14 juin 2017 (formation professionnelle)"/>
+<LIEN_TXT idtxt="KALITEXT000042312962" titretxt="Formation professionnelle"/>
+<LIEN_TXT idtxt="KALITEXT000042598160" titretxt="Modification de l'accord du 19 janvier 2018 (CPPNI)"/>
+<LIEN_TXT idtxt="KALITEXT000043257684" titretxt="Congés pour événements familiaux"/>
+<LIEN_TXT idtxt="KALITEXT000043257697" titretxt="Niveau de prise en charge des diplômes et certifications préparés en apprentissage"/>
+<LIEN_TXT idtxt="KALITEXT000043257711" titretxt="Classifications professionnelles"/>
+<LIEN_TXT idtxt="KALITEXT000043226044" titretxt="Adhésion de la FEC FO"/>
+<LIEN_TXT idtxt="KALITEXT000043348164" titretxt="Dispositif spécifique d'activité partielle de longue durée (APLD)"/>
+<LIEN_TXT idtxt="KALITEXT000043762789" titretxt="Niveau de prise en charge des diplômes et certifications préparés en apprentissage"/>
+<LIEN_TXT idtxt="KALITEXT000043762806" titretxt="CPPNI"/>
+<LIEN_TXT idtxt="KALITEXT000045971588" titretxt="Commission paritaire nationale de l'emploi et de la formation professionnelle (CPNEFP)"/>
+<LIEN_TXT idtxt="KALITEXT000045971616" titretxt="CPPNI"/>
+<LIEN_TXT idtxt="KALITEXT000046054834" titretxt="Concours UMOF et MAF secteur 3 de la branche"/>
+<LIEN_TXT idtxt="KALITEXT000046314066" titretxt="Frais de santé"/>
+<LIEN_TXT idtxt="KALITEXT000046314130" titretxt="Fonds d'action sociale"/>
+<LIEN_TXT idtxt="KALITEXT000046314147" titretxt="Régime de prévoyance"/>
+<LIEN_TXT idtxt="KALITEXT000047137357" titretxt="Repos hebdomadaire"/>
+<LIEN_TXT idtxt="KALITEXT000048638402" titretxt="Égalité professionnelle entre les femmes et les hommes"/>
+<LIEN_TXT idtxt="KALITEXT000049150479" titretxt="Classifications professionnelles"/>
+<LIEN_TXT idtxt="KALITEXT000049693860" titretxt="Observatoire prospectif paritaire des métiers et des qualifications"/>
+<LIEN_TXT idtxt="KALITEXT000049870192" titretxt="Listes de métiers exposés à des risques ergonomiques"/>
+<LIEN_TXT idtxt="KALITEXT000050140835" titretxt="Mise à jour de la convention collective"/>
+<LIEN_TXT idtxt="KALITEXT000050140850" titretxt="Régime de prévoyance"/>
+<LIEN_TXT idtxt="KALITEXT000051295142" titretxt="Frais de santé"/>
+<LIEN_TXT idtxt="KALITEXT000051843347" titretxt="Financement de la formation professionnelle"/>
+<LIEN_TXT idtxt="KALITEXT000051927509" titretxt="Classifications professionnelles"/>
+<LIEN_TXT idtxt="KALITEXT000052483058" titretxt="Classifications professionnelles"/>
+<LIEN_TXT idtxt="KALITEXT000053497395" titretxt="Frais de santé"/>
+</TM>
+<TM niv="1">
+<TITRE_TM>Textes Salaires</TITRE_TM>
+<LIEN_TXT idtxt="KALITEXT000005668645" titretxt="Salaires"/>
+<LIEN_TXT idtxt="KALITEXT000005668647" titretxt="Salaires"/>
+<LIEN_TXT idtxt="KALITEXT000005668649" titretxt="Salaires"/>
+<LIEN_TXT idtxt="KALITEXT000005668651" titretxt="Salaires"/>
+<LIEN_TXT idtxt="KALITEXT000005668653" titretxt="Salaires"/>
+<LIEN_TXT idtxt="KALITEXT000005668655" titretxt="Salaires"/>
+<LIEN_TXT idtxt="KALITEXT000018772792" titretxt="Salaires"/>
+<LIEN_TXT idtxt="KALITEXT000020041557" titretxt="Salaires au 1er janvier 2009"/>
+<LIEN_TXT idtxt="KALITEXT000022107146" titretxt="Salaires"/>
+<LIEN_TXT idtxt="KALITEXT000023105147" titretxt="Salaires"/>
+<LIEN_TXT idtxt="KALITEXT000024611317" titretxt="Salaires minima"/>
+<LIEN_TXT idtxt="KALITEXT000026534382" titretxt="Salaires"/>
+<LIEN_TXT idtxt="KALITEXT000028216934" titretxt="Salaires"/>
+<LIEN_TXT idtxt="KALITEXT000029558413" titretxt="Salaires"/>
+<LIEN_TXT idtxt="KALITEXT000031424480" titretxt="Salaires minimaux pour l'année 2015"/>
+<LIEN_TXT idtxt="KALITEXT000033225375" titretxt="Salaires minimaux pour l'année 2016"/>
+<LIEN_TXT idtxt="KALITEXT000036835692" titretxt="Salaires minima 2018"/>
+<LIEN_TXT idtxt="KALITEXT000038776436" titretxt="Salaires minima conventionnels"/>
+<LIEN_TXT idtxt="KALITEXT000042131838" titretxt="Salaires minima"/>
+<LIEN_TXT idtxt="KALITEXT000043762774" titretxt="Salaires minima au 1er juillet 2021"/>
+<LIEN_TXT idtxt="KALITEXT000045129992" titretxt="Salaires au 1er février 2022"/>
+<LIEN_TXT idtxt="KALITEXT000046280580" titretxt="Salaires minima conventionnels"/>
+<LIEN_TXT idtxt="KALITEXT000047463995" titretxt="Salaires minima au 1er mai 2023"/>
+<LIEN_TXT idtxt="KALITEXT000048150954" titretxt="Salaires minima au 1er octobre 2023"/>
+<LIEN_TXT idtxt="KALITEXT000049870178" titretxt="Salaires minima conventionnels au 1er août 2024"/>
+<LIEN_TXT idtxt="KALITEXT000050974856" titretxt="Salaires minima conventionnels au 1er février 2025"/>
+</TM>
+<TM niv="1">
+<TITRE_TM>Textes Extensions</TITRE_TM>
+<LIEN_TXT idtxt="KALITEXT000005668657" titretxt="Arrêté du 6 août 1986"/>
+<LIEN_TXT idtxt="KALITEXT000005668659" titretxt="Arrêté du 24 février 1989"/>
+<LIEN_TXT idtxt="KALITEXT000005668661" titretxt="Arrêté du 8 juin 1993"/>
+<LIEN_TXT idtxt="KALITEXT000005668663" titretxt="Arrêté du 13 juillet 1993"/>
+<LIEN_TXT idtxt="KALITEXT000005668665" titretxt="Arrêté du 29 juin 1994"/>
+<LIEN_TXT idtxt="KALITEXT000005668667" titretxt="Arrêté du 27 janvier 1995"/>
+<LIEN_TXT idtxt="KALITEXT000005668669" titretxt="Arrêté du 15 janvier 1996"/>
+<LIEN_TXT idtxt="KALITEXT000005668671" titretxt="Arrêté du 14 mai 1996"/>
+<LIEN_TXT idtxt="KALITEXT000005668673" titretxt="Arrêté du 29 août 1996"/>
+<LIEN_TXT idtxt="KALITEXT000005668676" titretxt="Arrêté du 7 octobre 1997"/>
+<LIEN_TXT idtxt="KALITEXT000005668678" titretxt="Arrêté du 4 février 1998"/>
+<LIEN_TXT idtxt="KALITEXT000005668680" titretxt="Arrêté du 20 avril 1998"/>
+<LIEN_TXT idtxt="KALITEXT000005668682" titretxt="Arrêté du 1 octobre 1998"/>
+<LIEN_TXT idtxt="KALITEXT000005668684" titretxt="Arrêté du 12 octobre 1998"/>
+<LIEN_TXT idtxt="KALITEXT000005668686" titretxt="Arrêté du 23 février 2000"/>
+<LIEN_TXT idtxt="KALITEXT000005668688" titretxt="Arrêté du 19 décembre 2000"/>
+<LIEN_TXT idtxt="KALITEXT000005668690" titretxt="Arrêté du 27 novembre 2001"/>
+<LIEN_TXT idtxt="KALITEXT000005668692" titretxt="Arrêté du 13 novembre 2001"/>
+<LIEN_TXT idtxt="KALITEXT000005668694" titretxt="Arrêté du 26 mars 2002"/>
+<LIEN_TXT idtxt="KALITEXT000005668696" titretxt="Arrêté du 23 avril 2002"/>
+<LIEN_TXT idtxt="KALITEXT000005668698" titretxt="Arrêté du 23 avril 2002"/>
+<LIEN_TXT idtxt="KALITEXT000005668700" titretxt="Arrêté du 11 juin 2002"/>
+<LIEN_TXT idtxt="KALITEXT000005668702" titretxt="Arrêté du 11 juin 2002"/>
+<LIEN_TXT idtxt="KALITEXT000005668704" titretxt="Arrêté du 5 juillet 2002"/>
+<LIEN_TXT idtxt="KALITEXT000005668706" titretxt="Arrêté du 1 août 2002"/>
+<LIEN_TXT idtxt="KALITEXT000005668708" titretxt="Arrêté du 6 décembre 2002"/>
+<LIEN_TXT idtxt="KALITEXT000005668710" titretxt="ARRETE du 6 mai 2004"/>
+<LIEN_TXT idtxt="KALITEXT000005668712" titretxt="ARRETE du 7 juin 2004"/>
+<LIEN_TXT idtxt="KALITEXT000005668714" titretxt="ARRETE du 8 décembre 2004"/>
+<LIEN_TXT idtxt="KALITEXT000005668716" titretxt="ARRETE du 15 décembre 2004"/>
+<LIEN_TXT idtxt="KALITEXT000005668718" titretxt="ARRETE du 3 octobre 2005"/>
+<LIEN_TXT idtxt="KALITEXT000005668720" titretxt="ARRETE du 26 octobre 2005"/>
+<LIEN_TXT idtxt="KALITEXT000005668722" titretxt="ARRETE du 11 janvier 2006"/>
+<LIEN_TXT idtxt="KALITEXT000005668724" titretxt="ARRETE du 16 octobre 2006"/>
+<LIEN_TXT idtxt="KALITEXT000005668726" titretxt="ARRETE du 6 février 2007"/>
+<LIEN_TXT idtxt="KALITEXT000005668728" titretxt="ARRETE du 15 mars 2007"/>
+<LIEN_TXT idtxt="KALITEXT000005668730" titretxt="ARRETE du 16 juillet 2007"/>
+</TM>
+</STRUCTURE_TXT>
+<TXTS_ISO/>
+<ACTS_PRO>
+<ACT_PRO>Fleuristes, vente et services des animaux familiers</ACT_PRO>
+</ACTS_PRO>
+<NUMS_BROCH>
+<NUM_BROCH>3010</NUM_BROCH>
+</NUMS_BROCH>
+
+
+</IDCC>
