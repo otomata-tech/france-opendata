@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ARTICLE>
+<META>
+<META_COMMUN>
+<ID>LEGIARTI000054354526</ID>
+<ANCIEN_ID/>
+<ORIGINE>LEGI</ORIGINE>
+<URL>article/LEGI/ARTI/00/00/54/35/45/LEGIARTI000054354526.xml</URL>
+<NATURE>Article</NATURE>
+</META_COMMUN>
+<META_SPEC>
+<META_ARTICLE>
+
+<NUM>A5332-103</NUM>
+
+<ETAT>VIGUEUR</ETAT>
+
+<DATE_DEBUT>2026-07-01</DATE_DEBUT>
+<DATE_FIN>2999-01-01</DATE_FIN>
+
+
+
+<TYPE>AUTONOME</TYPE>
+</META_ARTICLE>
+</META_SPEC>
+</META>
+<CONTEXTE>
+<TEXTE autorite="" cid="LEGITEXT000023086525" date_publi="2999-01-01" date_signature="2999-01-01" ministere="" nature="CODE" nor="" num="" num_parution_jo="">
+<TITRE_TXT c_titre_court="Code des transports" debut="2010-12-01" fin="2999-01-01" id_txt="LEGITEXT000023086525">Code des transports</TITRE_TXT>
+<TM>
+<TITRE_TM debut="2013-08-30" fin="2999-01-01" id="LEGISCTA000027908281">PARTIE RÉGLEMENTAIRE - Arrêtés </TITRE_TM>
+<TM>
+<TITRE_TM debut="2025-06-08" fin="2999-01-01" id="LEGISCTA000051706005">CINQUIÈME PARTIE : TRANSPORT ET NAVIGATION MARITIMES</TITRE_TM>
+<TM>
+<TITRE_TM debut="2025-06-08" fin="2999-01-01" id="LEGISCTA000051706007">Livre III : LES PORTS MARITIMES</TITRE_TM>
+<TM>
+<TITRE_TM debut="2025-06-08" fin="2999-01-01" id="LEGISCTA000051706009">Titre III : POLICE DES PORTS MARITIMES</TITRE_TM>
+<TM>
+<TITRE_TM debut="2025-06-08" fin="2999-01-01" id="LEGISCTA000051706011">Chapitre II : Sûreté portuaire</TITRE_TM>
+<TM>
+<TITRE_TM debut="2025-06-08" fin="2999-01-01" id="LEGISCTA000051706019">Section 1 : Organisation administrative</TITRE_TM>
+</TM>
+</TM>
+</TM>
+</TM>
+</TM>
+</TM>
+</TEXTE>
+</CONTEXTE>
+
+<VERSIONS>
+<VERSION etat="VIGUEUR">
+<LIEN_ART debut="2026-07-01" etat="VIGUEUR" fin="2999-01-01" id="LEGIARTI000054354526" num="A5332-103" origine="LEGI"/>
+</VERSION>
+</VERSIONS>
+<NOTA>
+<CONTENU/>
+</NOTA>
+<BLOC_TEXTUEL>
+<CONTENU>
+<p align="left">Le rapport de situation sur la sûreté des ports et des installations portuaires prévu à l'article R. 5332-5 comporte les parties suivantes :</p>
+<p align="left">1° Organisation locale de la sûreté portuaire et association des acteurs ;</p>
+<p align="left">2° Sécurisation des ports maritimes contre le narcotrafic et enquêtes administratives de sécurité</p>
+<p align="left">3° Port(s) (autorité(s) portuaire(s), nombre annuel d'escales, validité des documents de sûreté, suivi des audits nationaux de sûreté portuaire et inspections européennes et échéancier des mesures à prendre pour remédier aux non-conformités constatées) ;</p>
+<p align="left">4° Installation(s) portuaire(s) (liste, exploitant(s), nombre annuel d'escales, validité des documents de sûreté, suivi des audits nationaux de sûreté portuaire et inspections européennes et échéancier des mesures à prendre pour remédier aux non-conformités constatées) ;</p>
+<p align="left">5° Etat récapitulatif des contrôles de sûreté réalisés par les exploitants de terminaux à passagers (atteinte des taux préfectoraux pour chaque catégorie de personnes et de véhicules, en distinguant les variations saisonnières).</p>
+</CONTENU>
+</BLOC_TEXTUEL>
+<LIENS>
+<LIEN cidtexte="JORFTEXT000054341681" datesignatexte="2026-06-25" id="LEGIARTI000054354510" naturetexte="ARRETE" nortexte="TRAT2600717A" num="1" numtexte="" sens="cible" typelien="CREE">Arrêté du 25 juin 2026 - art. 1</LIEN>
+<LIEN cidtexte="LEGITEXT000023086525" datesignatexte="2999-01-01" id="LEGIARTI000030031330" naturetexte="CODE" nortexte="" num="R5332-5" numtexte="" sens="source" typelien="CITATION">Code des transports - art. R5332-5</LIEN>
+</LIENS>
+</ARTICLE>
