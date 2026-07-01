@@ -14,6 +14,7 @@ partagés entre projets (source unique, pas de duplication).
 | `SireneClient` | INSEE Sirene (SIRET, siège) | `SIRENE_API_KEY` (env) |
 | `BdTopoClient` | IGN BDTOPO V3 via WFS (bâti existant d'une parcelle : emprise au sol, CES réel, usages, hauteurs) | — |
 | `SitadelClient` | Sit@del SDES/DiDo (permis de construire/aménager, demandeurs SIREN) — fichiers nationaux à pré-fetcher, pas d'API query-able | — |
+| `FrenchTechClient` | Capitale French Tech (WordPress REST live) : annuaire écosystème (startups/structures/prestataires, dirigeant+email+tel), événements, appels à projet, financements + French Tech Central (Synbird) — défaut Aix-Marseille, `base_url` paramétrable | — |
 
 ```python
 from france_opendata import EntreprisesClient, DvfClient

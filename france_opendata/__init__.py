@@ -50,6 +50,7 @@ from .culture_spectacle import SpectacleClient
 from .finess import FinessClient
 from .has_essms import HasEssmsClient  # import lazy de duckdb (extra [sante]) dans _connect
 from .egapro import EgaproClient
+from .frenchtech import FrenchTechClient
 # ACCO = parser + crawler (pas de client de requête) : importer `france_opendata.acco`
 # (parse_acco) et `france_opendata.acco_ingest` directement.
 
@@ -58,4 +59,4 @@ __all__ = ["EntreprisesClient", "SireneClient", "InpiClient", "BodaccClient", "B
            "EnedisClient", "BanClient", "ApiCartoClient", "PvgisClient",
            "GpuClient", "QpvClient", "InseeMelodiClient", "EpfifClient",
            "OpendatasoftClient", "SpectacleClient", "FinessClient", "HasEssmsClient",
-           "EgaproClient"]
+           "EgaproClient", "FrenchTechClient"]
