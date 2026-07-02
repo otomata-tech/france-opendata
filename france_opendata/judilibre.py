@@ -123,9 +123,12 @@ def _map(d: dict) -> dict[str, Any]:
     location = d.get("location")
     if juri in ("ca", "tj") and location:
         juridiction = f"{juridiction} {location}" if location else juridiction
+    tas = d.get("titlesAndSummaries")
+    if isinstance(tas, list):  # /export renvoie une liste, /decision un objet
+        tas = tas[0] if tas else {}
     return {
         "id": d["id"],
-        "titre": (d.get("titlesAndSummaries") or {}).get("title") or d.get("summary") or None,
+        "titre": (tas or {}).get("title") or d.get("summary") or None,
         "juridiction": juridiction or None,
         "numero": d.get("number") or None,
         "date_dec": (d.get("decision_date") or "")[:10] or None,
