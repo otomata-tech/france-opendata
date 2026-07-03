@@ -5,10 +5,17 @@ d'urbanisme » (SDES, ministère de la Transition écologique). 4 datafiles à R
   https://data.statistiques.developpement-durable.gouv.fr/dido/api/v1/datafiles/<rid>/csv
 Pas de clé, Licence Ouverte, MAJ mensuelle, couverture France depuis 2013.
 
+Deux surfaces d'accès :
+- **`query()` — API DiDo `/rows`, filtrée côté serveur** (COMM, DEP_CODE, AN_DEPOT…,
+  opérateurs eq/in/gte/lte, pagination pageSize∈{10,20,50,100}). Adaptée au **lookup
+  ponctuel** (une commune / un département) : c'est le pendant « live » du productible
+  solaire. Le schéma des lignes JSON est **identique aux colonnes du CSV** (mêmes
+  parseurs) — seuls les types diffèrent (JSON natif int/bool vs strings du CSV).
+- **`download()` + `iter_permis()` — CSV national COMPLET** (276 Mo pour les locaux),
+  pour l'ingestion de MASSE. Pas de Range HTTP → un refresh re-télécharge tout, un
+  download coupé repart de zéro.
+
 Gotchas de la source (mesurés, cf. GR docs/sources/04-sitadel.md) :
-- **Pas d'API query-able** : un GET renvoie le CSV national COMPLET (276 Mo pour les
-  locaux non résidentiels). Pas de filtre date, pas de delta, pas de Range HTTP →
-  un refresh re-télécharge tout, un download coupé repart de zéro.
 - **Le RID est fixe** et renvoie toujours le dernier millésime publié ; le millésime
   courant se lit dans les métadonnées (`SitadelClient.metadata()["millesime"]`).
 - **Stall silencieux observé** sur les gros fichiers (socket ouverte, plus d'octets,
@@ -182,6 +189,36 @@ def parse_amenager(row: dict) -> dict[str, Any]:
 
 _PARSERS = {"logements": parse_logement, "locaux": parse_locaux, "amenager": parse_amenager}
 
+RID_BY_KIND = {"logements": RID_LOGEMENTS, "locaux": RID_LOCAUX, "amenager": RID_AMENAGER}
+
+# Pagination DiDo : pageSize est contraint à une de ces valeurs (400 sinon).
+DIDO_PAGE_SIZES = (10, 20, 50, 100)
+
+# Opérateurs de filtre DiDo (`champ=op:valeur`). `in` = liste jointe par des virgules.
+_DIDO_OPS = frozenset({"eq", "neq", "gt", "gte", "lt", "lte", "in"})
+
+
+def _dido_filter(spec: Any) -> str:
+    """Traduit une spec de filtre → syntaxe DiDo `op:valeur`.
+
+    spec = valeur brute (→ `eq:valeur`) OU tuple `(op, valeur)` avec op ∈ _DIDO_OPS ;
+    pour `in`, valeur = itérable → jointe par des virgules (`in:a,b,c`).
+    """
+    if isinstance(spec, tuple) and len(spec) == 2 and spec[0] in _DIDO_OPS:
+        op, val = spec
+        if op == "in":
+            items = val if isinstance(val, (list, tuple, set)) else [val]
+            val = ",".join(str(v) for v in items)
+        return f"{op}:{val}"
+    return f"eq:{spec}"
+
+
+def _stringify(row: dict) -> dict[str, Optional[str]]:
+    """Ligne JSON DiDo → dict de strings (None préservé), pour réutiliser les parseurs
+    CSV tels quels : `/rows` renvoie des types natifs (int/bool), les parseurs
+    attendent des strings (ils passent tout par `_clean`/`_to_int`/`_to_bool`)."""
+    return {k: (None if v is None else v if isinstance(v, str) else str(v)) for k, v in row.items()}
+
 
 class SitadelClient:
     def __init__(self, timeout: int = 60):
@@ -219,6 +256,92 @@ class SitadelClient:
                 last_err = e
                 time.sleep(3 * (attempt + 1))
         raise RuntimeError(f"download Sit@del {rid} en échec après {retries} tentatives: {last_err}")
+
+    def query(
+        self,
+        rid: str,
+        kind: str,
+        *,
+        filters: Optional[dict[str, Any]] = None,
+        page: int = 1,
+        page_size: int = 100,
+    ) -> dict[str, Any]:
+        """Interroge l'API DiDo `/rows` (filtre + pagination côté serveur) → permis normalisés.
+
+        Pendant « live » de `download()`+`iter_permis()` : au lieu de rapatrier le CSV
+        national, DiDo filtre côté serveur. Adapté au lookup ponctuel (une commune / un
+        département), pas au refresh de masse (pagination bornée à pageSize≤100).
+
+        Args:
+            rid: datafile (RID_LOGEMENTS / RID_LOCAUX / RID_AMENAGER).
+            kind: sélectionne le parseur ("logements" | "locaux" | "amenager").
+            filters: {champ: spec} — spec = valeur (→ `eq`) ou tuple `(op, valeur)`,
+                op ∈ {eq,neq,gt,gte,lt,lte,in}. Champs utiles : COMM (INSEE commune),
+                DEP_CODE (département), AN_DEPOT (année de dépôt), ETAT_DAU,
+                DESTINATION_PRINCIPALE. Ex. `{"COMM": "75056"}`,
+                `{"DEP_CODE": "59", "AN_DEPOT": ("gte", 2024)}`,
+                `{"COMM": ("in", ["75056", "69123"])}`.
+            page: page 1-based. page_size ∈ {10, 20, 50, 100}.
+
+        Returns:
+            `{"total": int, "page": int, "page_size": int, "permis": [normalisés]}`.
+        """
+        if kind not in _PARSERS:
+            raise ValueError(f"kind inconnu {kind!r} — attendu {KINDS}")
+        if page_size not in DIDO_PAGE_SIZES:
+            raise ValueError(f"page_size doit être dans {DIDO_PAGE_SIZES}, reçu {page_size}")
+        parse = _PARSERS[kind]
+        params: dict[str, Any] = {"page": page, "pageSize": page_size}
+        for field, spec in (filters or {}).items():
+            params[field] = _dido_filter(spec)
+        r = self.session.get(f"{DIDO_BASE}/{rid}/rows", params=params, timeout=self.timeout)
+        r.raise_for_status()
+        body = r.json()
+        rows = body.get("data") or []
+        return {
+            "total": body.get("total"),
+            "page": body.get("page"),
+            "page_size": page_size,
+            "permis": [parse(_stringify(row)) for row in rows],
+        }
+
+    def search(
+        self,
+        kind: str = "locaux",
+        *,
+        communes: Optional[str | list[str]] = None,
+        dept: Optional[str] = None,
+        an_min: Optional[int] = None,
+        an_max: Optional[int] = None,
+        page: int = 1,
+        page_size: int = 100,
+    ) -> dict[str, Any]:
+        """`query()` de commodité : construit les filtres géo/temporels usuels.
+
+        Args:
+            kind: "logements" | "locaux" | "amenager".
+            communes: code(s) INSEE commune (str ou liste → filtre `in`).
+            dept: code département INSEE (ex. "59", "2A").
+            an_min / an_max: bornes d'année de dépôt (incluses). Une plage fermée
+                s'exprime via `in:` (DiDo n'accepte pas deux contraintes sur AN_DEPOT) ;
+                une seule borne → `gte`/`lte`.
+            page, page_size: pagination DiDo.
+        """
+        if kind not in RID_BY_KIND:
+            raise ValueError(f"kind inconnu {kind!r} — attendu {tuple(RID_BY_KIND)}")
+        filters: dict[str, Any] = {}
+        if communes:
+            comms = [communes] if isinstance(communes, str) else list(communes)
+            filters["COMM"] = comms[0] if len(comms) == 1 else ("in", comms)
+        if dept:
+            filters["DEP_CODE"] = dept
+        if an_min is not None and an_max is not None:
+            filters["AN_DEPOT"] = ("in", list(range(an_min, an_max + 1)))
+        elif an_min is not None:
+            filters["AN_DEPOT"] = ("gte", an_min)
+        elif an_max is not None:
+            filters["AN_DEPOT"] = ("lte", an_max)
+        return self.query(RID_BY_KIND[kind], kind, filters=filters, page=page, page_size=page_size)
 
     def iter_rows(self, csv_path: str | Path) -> Iterator[dict[str, str]]:
         """Lignes brutes du CSV (DictReader, `;`), en streaming."""
