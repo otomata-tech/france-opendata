@@ -17,6 +17,7 @@
 - GpuClient         : Géoportail de l'Urbanisme (zonage PLU/PLUi d'un point, prescriptions, servitudes, URL règlement) — sans clé
 - QpvClient         : Quartiers Prioritaires de la Ville (dataset national, par commune / proximité d'un point) — sans clé
 - InseeMelodiClient : INSEE Mélodi — données locales par commune (population, familles, revenus, logement) — sans clé
+- InseeIrisClient   : INSEE recensement à l'IRIS (quartier) — parquet bundlé RP 2021, par IRIS ou par commune/arrondissement — extra [stock]
 - EpfifClient       : secteurs d'intervention EPFIF (Île-de-France) — scrape live de la page cartographie + cache TTL — sans clé
 - SpectacleClient   : Licences entrepreneurs spectacles vivants (data.culture.gouv.fr) — sans clé
 - OpendatasoftClient: client générique Opendatasoft Explore v2.1 (tout portail ODS public)
@@ -44,6 +45,7 @@ from .pvgis import PvgisClient
 from .gpu import GpuClient
 from .qpv import QpvClient
 from .insee_melodi import InseeMelodiClient
+from .insee_iris import InseeIrisClient  # import lazy de duckdb (extra [stock]) dans _connect
 from .epfif import EpfifClient
 from .opendatasoft import OpendatasoftClient
 from .culture_spectacle import SpectacleClient
@@ -57,6 +59,6 @@ from .frenchtech import FrenchTechClient
 __all__ = ["EntreprisesClient", "SireneClient", "InpiClient", "BodaccClient", "BoampClient", "DvfClient", "DpeClient",
            "BdTopoClient", "SitadelClient", "GeorisquesClient",
            "EnedisClient", "BanClient", "ApiCartoClient", "PvgisClient",
-           "GpuClient", "QpvClient", "InseeMelodiClient", "EpfifClient",
+           "GpuClient", "QpvClient", "InseeMelodiClient", "InseeIrisClient", "EpfifClient",
            "OpendatasoftClient", "SpectacleClient", "FinessClient", "HasEssmsClient",
            "EgaproClient", "FrenchTechClient"]
