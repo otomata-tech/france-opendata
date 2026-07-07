@@ -12,7 +12,7 @@
 - GeorisquesClient  : Géorisques — ICPE (régime, IED, Seveso, DREAL) + risques naturels d'une commune (GASPAR) + aléa argiles (RGA) — sans clé
 - EnedisClient      : Enedis conso élec annuelle par adresse (signaux MWh) — sans clé
 - BanClient         : Base Adresse Nationale (géocodage / reverse) — sans clé
-- ApiCartoClient    : IGN API Carto cadastre (parcelle en un point/géométrie) — sans clé
+- ApiCartoClient    : cadastre IGN (parcelle en un point/géométrie), WFS Géoplateforme — sans clé
 - PvgisClient       : PVGIS JRC (productible solaire annuel pour un point + kWc) — sans clé
 - GpuClient         : Géoportail de l'Urbanisme (zonage PLU/PLUi d'un point, prescriptions, servitudes, URL règlement) — sans clé
 - QpvClient         : Quartiers Prioritaires de la Ville (dataset national, par commune / proximité d'un point) — sans clé
