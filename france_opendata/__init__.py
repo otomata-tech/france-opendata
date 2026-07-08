@@ -14,6 +14,7 @@
 - BanClient         : Base Adresse Nationale (géocodage / reverse) — sans clé
 - ApiCartoClient    : cadastre IGN (parcelle en un point/géométrie), WFS Géoplateforme — sans clé
 - PvgisClient       : PVGIS JRC (productible solaire annuel pour un point + kWc) — sans clé
+- IgnClient         : IGN Géoplateforme navigation — isochrone (zone atteignable en N min à pied/voiture, GeoJSON) — sans clé
 - GpuClient         : Géoportail de l'Urbanisme (zonage PLU/PLUi d'un point, prescriptions, servitudes, URL règlement) — sans clé
 - QpvClient         : Quartiers Prioritaires de la Ville (dataset national, par commune / proximité d'un point) — sans clé
 - InseeMelodiClient : INSEE Mélodi — données locales par commune (population, familles, revenus, logement) — sans clé
@@ -42,6 +43,7 @@ from .enedis import EnedisClient
 from .ban import BanClient
 from .apicarto import ApiCartoClient
 from .pvgis import PvgisClient
+from .ign import IgnClient
 from .gpu import GpuClient
 from .qpv import QpvClient
 from .insee_melodi import InseeMelodiClient
@@ -59,6 +61,6 @@ from .frenchtech import FrenchTechClient
 __all__ = ["EntreprisesClient", "SireneClient", "InpiClient", "BodaccClient", "BoampClient", "DvfClient", "DpeClient",
            "BdTopoClient", "SitadelClient", "GeorisquesClient",
            "EnedisClient", "BanClient", "ApiCartoClient", "PvgisClient",
-           "GpuClient", "QpvClient", "InseeMelodiClient", "InseeIrisClient", "EpfifClient",
+           "IgnClient", "GpuClient", "QpvClient", "InseeMelodiClient", "InseeIrisClient", "EpfifClient",
            "OpendatasoftClient", "SpectacleClient", "FinessClient", "HasEssmsClient",
            "EgaproClient", "FrenchTechClient"]
