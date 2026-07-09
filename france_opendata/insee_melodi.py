@@ -15,12 +15,18 @@ jamais deviné — donnée absente = renvoyée à null.
 """
 from __future__ import annotations
 
+import time
 from typing import Any, Optional
 
 import requests
 
 BASE_URL = "https://api.insee.fr/melodi/data"
 TIMEOUT = 30
+# Backoff entre tentatives (s) sur flakiness AMONT INSEE : l'API Mélodi renvoie par
+# intermittence des 5xx / resets sur tous les blocs à la fois (#194-195), non corrélés
+# à la charge — un retry les absorbe de façon transparente. Un 4xx (territoire/requête
+# invalide) n'est PAS retryé.
+_RETRY_BACKOFF = (0.5, 1.5, 3.0)
 
 # Type de famille (TFN) — confirmé par match des effectifs nationaux INSEE FAM1 2022.
 _TFN = {
@@ -61,11 +67,24 @@ class InseeMelodiClient:
         self._session.headers.update({"User-Agent": "france-opendata", "Accept": "application/json"})
 
     def _get(self, dataset: str, insee: str, max_result: int = 2000) -> list[dict]:
-        resp = self._session.get(f"{BASE_URL}/{dataset}",
-                                 params={"GEO": _geo_ref(insee), "maxResult": max_result},
-                                 timeout=self._timeout)
-        resp.raise_for_status()
-        return resp.json().get("observations", [])
+        params = {"GEO": _geo_ref(insee), "maxResult": max_result}
+        last: Exception | None = None
+        for backoff in (0.0, *_RETRY_BACKOFF):
+            if backoff:
+                time.sleep(backoff)
+            try:
+                resp = self._session.get(f"{BASE_URL}/{dataset}", params=params,
+                                         timeout=self._timeout)
+            except (requests.ConnectionError, requests.Timeout) as e:
+                last = e  # reset / timeout amont → flakiness, on retente
+                continue
+            if resp.status_code >= 500:
+                last = requests.HTTPError(f"INSEE Mélodi {resp.status_code} (amont)",
+                                          response=resp)
+                continue  # 5xx intermittent (#194-195) → retente
+            resp.raise_for_status()  # 4xx = requête/territoire invalide → non retryable
+            return resp.json().get("observations", [])
+        raise last  # toutes les tentatives ont échoué sur une erreur amont transitoire
 
     @staticmethod
     def _value(obs: dict):
