@@ -387,6 +387,19 @@ def _dept_partition(departement: Optional[str], code_postal: Optional[str]) -> O
     return None
 
 
+def _normalize_naf(code: str) -> str:
+    """Normalise un code APE/NAF vers la forme stockée dans le parquet SIRENE
+    (`NN.NNL`, ex. "47.11F"). Accepte les deux saisies courantes — avec ou sans
+    point ("4711F" comme "47.11F") — car le stock ne matche que la forme pointée
+    (un code sans point renverrait 0 résultat, silencieusement). Un code hors
+    format APE est renvoyé tel quel.
+    """
+    c = code.replace(".", "").strip().upper()
+    if len(c) == 5 and c[:4].isdigit() and c[4].isalpha():
+        return f"{c[:2]}.{c[2:]}"
+    return code
+
+
 def search(
     naf: Optional[str] = None,
     code_commune: Optional[str] = None,
@@ -403,7 +416,8 @@ def search(
     """Recherche multi-critères. Tous les filtres sont AND.
 
     Args:
-        naf: code APE (ex. "4711F", "10.71C") — match exact sur activitePrincipale
+        naf: code APE — avec ou sans point ("4711F" comme "47.11F"), normalisé
+            vers la forme pointée du stock (match exact sur activitePrincipale)
         code_commune: code INSEE COG (ex. "13201" pour Marseille 1er)
         code_postal: ex. "13001"
         departement: code département 2 chars métropole (ex. "26") ou 3 chars DOM
@@ -433,7 +447,7 @@ def search(
         where.append("etablissementSiege = TRUE")
     if naf:
         where.append("activitePrincipaleEtablissement = ?")
-        params.append(naf)
+        params.append(_normalize_naf(naf))
     if tranche_effectifs:
         codes = [str(c).strip() for c in tranche_effectifs if str(c).strip()]
         if codes:
