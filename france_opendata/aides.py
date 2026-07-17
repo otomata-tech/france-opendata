@@ -40,6 +40,12 @@ _NIVEAU = {"1": "territoriale", "2": "nationale", "3": "européenne"}
 
 _TAG_RE = re.compile(r"<[^>]+>")
 
+# Paris/Lyon/Marseille : le référentiel territoires n'indexe QUE les
+# arrondissements (751xx/693xx/132xx) — le code COG de la commune-mère y est
+# absent. On le résout en l'union de ses arrondissements (l'entité « ville »
+# du référentiel, sans insee, est un ancêtre commun → couverte via `parents`).
+_PLM_ARRONDISSEMENTS = {"75056": "751", "69123": "693", "13055": "132"}
+
 
 def _text(raw: Optional[str]) -> str:
     """HTML embarqué (entités + balises) → texte nu normalisé."""
@@ -119,10 +125,14 @@ class AidesClient:
             return None
         ters: list[dict] = []
         if insee:
-            t = self._ter_by_insee.get(str(insee))
-            if not t:
+            prefix = _PLM_ARRONDISSEMENTS.get(str(insee))
+            if prefix:
+                ters = [t for i, t in self._ter_by_insee.items() if i.startswith(prefix)]
+            else:
+                t = self._ter_by_insee.get(str(insee))
+                ters = [t] if t else []
+            if not ters:
                 raise ValueError(f"Commune INSEE {insee} inconnue du référentiel territoires")
-            ters = [t]
         else:
             ters = self._ter_by_cp.get(str(code_postal), [])
             if not ters:

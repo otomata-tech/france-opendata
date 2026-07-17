@@ -19,8 +19,13 @@ TERRITOIRES = [
     {"id_ter": "56", "insee": "", "ter_code": "31", "parents": ",50007,1,0,", "DEL": "0", "status": "1"},
     {"id_ter": "12550", "insee": "31555", "ter_code": "31000",
      "parents": ",56,50007,1,0,", "DEL": "0", "status": "1"},
-    {"id_ter": "999", "insee": "75056", "ter_code": "75001",
+    {"id_ter": "999", "insee": "75103", "ter_code": "75003",
      "parents": ",1,0,", "DEL": "0", "status": "1"},
+    # Marseille : le référentiel n'a QUE les arrondissements (pas de 13055)
+    {"id_ter": "55118", "insee": "13201", "ter_code": "13001",
+     "parents": ",37,1,0,", "DEL": "0", "status": "1"},
+    {"id_ter": "55119", "insee": "13202", "ter_code": "13002",
+     "parents": ",37,1,0,", "DEL": "0", "status": "1"},
 ]
 
 
@@ -49,6 +54,7 @@ AIDES = [
     _aide("5", ["1"], nom="AAP à échéance", effectif="2,3",
           date_fin="2026-09-30 00:00:00", natures=["Subvention"]),
     _aide("6", ["1"], nom="Supprimée", status="0"),
+    _aide("7", ["55119"], nom="Arrondissement Marseille 2e"),
 ]
 
 
@@ -62,12 +68,18 @@ def client():
 def test_geo_matches_commune_and_ancestors(client):
     r = client.search(insee="31555")
     assert {i["id"] for i in r["items"]} == {"1", "2", "3", "5"}  # pas Paris, pas la supprimée
-    assert r["funnel"] == {"base": 5, "geo": 4}
+    assert r["funnel"] == {"base": 6, "geo": 4}
 
 
 def test_geo_by_code_postal(client):
-    r = client.search(code_postal="75001")
+    r = client.search(code_postal="75003")
     assert {i["id"] for i in r["items"]} == {"1", "4", "5"}
+
+
+def test_plm_commune_mere_resolves_all_arrondissements(client):
+    # 13055 absent du référentiel → union des arrondissements 132xx
+    r = client.search(insee="13055")
+    assert {i["id"] for i in r["items"]} == {"1", "5", "7"}
 
 
 def test_unknown_commune_raises(client):
