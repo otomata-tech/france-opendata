@@ -123,9 +123,19 @@ def test_compact_unescapes_html_and_levels(client):
 
 def test_get_returns_raw(client):
     client.search()  # force le load
-    raw = client.get("2")
-    assert raw["aid_nom"].startswith("R&eacute;")
+    raw = client.get("2", raw=True)
+    assert raw["aid_nom"].startswith("R&eacute;")   # brut = entités HTML intactes
+    assert "cache_indexation" in raw
     assert client.get("404") is None
+
+
+def test_get_default_is_cleaned(client):
+    client.search()
+    a = client.get("2")                              # défaut = detail() (nettoyé)
+    assert a["aid_nom"] == "Régionale prêt innovation"   # entités décodées
+    assert a["natures"] == ["Prêt", "Avance récupérable"]  # extrait de cache_indexation
+    assert "cache_indexation" not in a               # bruit de jointure retiré
+    assert a["niveau"] == "territoriale"
 
 
 def test_helpers():

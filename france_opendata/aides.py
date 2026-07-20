@@ -54,6 +54,20 @@ def _text(raw: Optional[str]) -> str:
     return re.sub(r"\s+", " ", _TAG_RE.sub(" ", html.unescape(raw))).strip()
 
 
+# Champs top-level porteurs de HTML embarqué (entités + balises) — à décoder comme
+# compact() le fait pour la recherche.
+_TEXT_FIELDS = (
+    "aid_nom", "aid_objet", "aid_montant", "aid_conditions",
+    "aid_benef", "aid_operations_el", "aid_validation",
+)
+
+
+def _links(items) -> list[dict]:
+    """`complements.*` → liens actionnables nus (texte décodé + lien + date)."""
+    return [{"texte": _text(s.get("texte")), "lien": s.get("lien"), "date": s.get("date")}
+            for s in (items or []) if isinstance(s, dict) and s.get("lien")]
+
+
 def _codes_for_effectif(n: int) -> set[str]:
     if n <= 0:
         return {"1", "2"}
@@ -233,7 +247,46 @@ class AidesClient:
             "items": [self.compact(a) for a in rows[offset:offset + limit]],
         }
 
-    def get(self, id_aid: str | int) -> Optional[dict]:
-        """Fiche complète brute d'une aide (source de vérité post-re-rank)."""
+    def detail(self, a: dict) -> dict:
+        """Fiche complète NETTOYÉE : champs texte décodés (`_text`) + extraits utiles
+        de `cache_indexation`/`complements`, débarrassés du bruit de jointure (id_file,
+        count, status, miseajour, echelon, lat/lng, logo…). Le brut intégral reste
+        accessible via `get(id, raw=True)`."""
+        ci = a.get("cache_indexation") or {}
+        comp = a.get("complements") if isinstance(a.get("complements"), dict) else {}
+        out = {k: v for k, v in a.items()
+               if k not in ("cache_indexation", "complements")}
+        for f in _TEXT_FIELDS:
+            if f in out:
+                out[f] = _text(out.get(f))
+        out["date_fin"] = _date_fin(a)
+        out["niveau"] = _NIVEAU.get(str(a.get("couverture_geo")), None)
+        out["natures"] = [n.get("typ_libelle") for n in ci.get("natures", [])]
+        out["financeurs"] = [
+            {k2: f.get(k2) for k2 in
+             ("org_nom", "org_ville", "org_telephone", "org_email", "org_site")
+             if f.get(k2)}
+            for f in ci.get("financeurs", [])]
+        out["territoires"] = [
+            {"insee": t.get("insee") or None, "libelle": t.get("ter_libelle"),
+             "code": t.get("ter_code")}
+            for t in ci.get("territoires", [])]
+        out["contacts"] = [
+            {k2: c.get(k2) for k2 in
+             ("cnt_nom", "cnt_ville", "cnt_telephone", "email", "cnt_site")
+             if c.get(k2)}
+            for c in ci.get("contacts", [])]
+        out["sources"] = _links(comp.get("source"))
+        out["formulaires"] = _links(comp.get("formulaire"))
+        return out
+
+    def get(self, id_aid: str | int, raw: bool = False) -> Optional[dict]:
+        """Fiche complète d'une aide (source de vérité post-re-rank).
+
+        Par défaut NETTOYÉE (`detail` : texte décodé + extraits de `cache_indexation`) ;
+        `raw=True` rend l'enregistrement brut de la base."""
         self._ensure_loaded()
-        return self._by_id.get(str(id_aid))
+        a = self._by_id.get(str(id_aid))
+        if a is None:
+            return None
+        return a if raw else self.detail(a)
