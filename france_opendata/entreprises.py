@@ -82,7 +82,11 @@ class EntreprisesClient:
         if commune:
             params["commune"] = commune
         if employees:
-            params["tranche_effectif_salarie_entreprise"] = ",".join(employees)
+            # `tranche_effectif_salarie` (l'établissement) est le SEUL nom filtrant :
+            # `..._entreprise` est accepté sans erreur par l'API PUIS IGNORÉ — le
+            # résultat paraît plausible mais n'est pas filtré (vérifié : 10 000 = le
+            # cap, contre 943 avec le bon nom).
+            params["tranche_effectif_salarie"] = ",".join(employees)
         if categorie_entreprise:
             params["categorie_entreprise"] = categorie_entreprise
         if ca_min:
@@ -90,12 +94,25 @@ class EntreprisesClient:
         if ca_max:
             params["ca_max"] = ca_max
         if idcc:
-            params["id_convention_collective"] = ",".join(idcc)
+            # L'API n'accepte QU'UN SEUL IDCC, sur EXACTEMENT 4 caractères (zéro de
+            # tête compris) : joindre plusieurs codes par une virgule déclenche un 400
+            # « doit contenir 4 caractères ». On le dit clairement plutôt que de laisser
+            # l'appelant croire à un OR possible ; pour plusieurs conventions, appeler
+            # une fois par code et fusionner (une entreprise peut porter N IDCC).
+            codes = [str(c).strip() for c in idcc if str(c).strip()]
+            if len(codes) > 1:
+                raise ValueError(
+                    "id_convention_collective n'accepte qu'UN seul IDCC par requête "
+                    f"(reçu {len(codes)}) — appelle une fois par code puis fusionne "
+                    "les résultats (dédup par siren)."
+                )
+            if codes:
+                params["id_convention_collective"] = codes[0].zfill(4)
 
         # API requires at least one search parameter
         search_params = [
             "q", "activite_principale", "departement", "code_postal",
-            "commune", "tranche_effectif_salarie_entreprise", "categorie_entreprise",
+            "commune", "tranche_effectif_salarie", "categorie_entreprise",
             "ca_min", "ca_max", "id_convention_collective",
         ]
         if not any(p in params for p in search_params):
