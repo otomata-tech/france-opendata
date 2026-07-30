@@ -313,10 +313,12 @@ class SitadelClient:
         dept: Optional[str] = None,
         an_min: Optional[int] = None,
         an_max: Optional[int] = None,
+        siren: Optional[str] = None,
+        siret: Optional[str] = None,
         page: int = 1,
         page_size: int = 100,
     ) -> dict[str, Any]:
-        """`query()` de commodité : construit les filtres géo/temporels usuels.
+        """`query()` de commodité : construit les filtres géo/temporels/demandeur usuels.
 
         Args:
             kind: "logements" | "locaux" | "amenager".
@@ -325,11 +327,26 @@ class SitadelClient:
             an_min / an_max: bornes d'année de dépôt (incluses). Une plage fermée
                 s'exprime via `in:` (DiDo n'accepte pas deux contraintes sur AN_DEPOT) ;
                 une seule borne → `gte`/`lte`.
+            siren / siret: identifiant du DEMANDEUR (SIREN_DEM / SIRET_DEM). Filtre
+                serveur, donc utilisable SANS scope géographique : « tous les permis
+                déposés par cette société », France entière, en une requête. ~35 % des
+                permis ont un demandeur vide (personnes physiques, règle de diffusion
+                RGPD) — ils sont hors de portée de ce filtre par construction.
             page, page_size: pagination DiDo.
+
+        Note: la parcelle cadastrale n'est PAS filtrable ici. DiDo la stocke en trois
+            paires de colonnes (SEC_CADASTRE{1,2,3}/NUM_CADASTRE{1,2,3}) que l'API
+            combine en ET : un filtre serveur ne couvrirait que la position 1 et
+            raterait silencieusement les autres. Scoper par commune puis filtrer sur
+            la clé `parcelles` des permis normalisés.
         """
         if kind not in RID_BY_KIND:
             raise ValueError(f"kind inconnu {kind!r} — attendu {tuple(RID_BY_KIND)}")
         filters: dict[str, Any] = {}
+        if siren:
+            filters["SIREN_DEM"] = siren
+        if siret:
+            filters["SIRET_DEM"] = siret
         if communes:
             comms = [communes] if isinstance(communes, str) else list(communes)
             filters["COMM"] = comms[0] if len(comms) == 1 else ("in", comms)

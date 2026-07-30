@@ -39,6 +39,7 @@ class EntreprisesClient:
         ca_min: int = None,
         ca_max: int = None,
         idcc: List[str] = None,
+        nature_juridique: List[str] = None,
         page: int = 1,
         per_page: int = 25,
     ) -> Dict[str, Any]:
@@ -56,6 +57,11 @@ class EntreprisesClient:
             ca_min: Minimum turnover (chiffre d'affaires)
             ca_max: Maximum turnover
             idcc: List of IDCC codes (convention collective, e.g. ['1285', '3090'])
+            nature_juridique: Legal-form codes (catégorie juridique INSEE niveau III,
+                e.g. ['6540'] for SCI, ['5710'] for SAS). Decisive when the form is
+                spoken as part of the name: « SCI ASC » matches 38 companies literally
+                NAMED "SCI ASC" and never the SCI named "ASC" — the form belongs in
+                this filter, not in `query`.
             page: Page number (1-based)
             per_page: Results per page (max 25)
 
@@ -108,12 +114,17 @@ class EntreprisesClient:
                 )
             if codes:
                 params["id_convention_collective"] = codes[0].zfill(4)
+        if nature_juridique:
+            # Vérifié le 30/07/2026 : filtre RÉELLEMENT appliqué (q=ASC → 1580 sans,
+            # 98 avec 6540), contrairement au piège `tranche_effectif_..._entreprise`
+            # ci-dessus qui est accepté puis ignoré.
+            params["nature_juridique"] = ",".join(str(c).strip() for c in nature_juridique)
 
         # API requires at least one search parameter
         search_params = [
             "q", "activite_principale", "departement", "code_postal",
             "commune", "tranche_effectif_salarie", "categorie_entreprise",
-            "ca_min", "ca_max", "id_convention_collective",
+            "ca_min", "ca_max", "id_convention_collective", "nature_juridique",
         ]
         if not any(p in params for p in search_params):
             raise ValueError(
