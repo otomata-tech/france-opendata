@@ -92,10 +92,15 @@ class StockQueryTimeout(RuntimeError):
     """Requête stock interrompue par le watchdog (scan trop long)."""
 
 
-def _query(sql: str, params: Optional[list[Any]] = None, *, fetch: str) -> Any:
+def _query(sql: str, params: Optional[list[Any]] = None, *, fetch: str,
+           path: Optional[str] = None) -> Any:
     """Exécute une requête DuckDB sous double garde concurrence + timeout DUR.
 
     Toutes les lectures du parquet passent par ici. `fetch` ∈ {"all", "one"}.
+    `path` = parquet visé (défaut : le stock établissement) — les deux stocks
+    partagent les MÊMES sémaphores, car ils partagent la machine : borner l'un
+    sans l'autre laisserait une rafale d'un stock saturer le threadpool que
+    l'autre garde protège.
     Lève `StockOverloaded` (saturé) ou `StockQueryTimeout` (scan trop long).
     """
     if not _INFLIGHT_SEM.acquire(blocking=False):
@@ -110,7 +115,7 @@ def _query(sql: str, params: Optional[list[Any]] = None, *, fetch: str) -> Any:
                 f"attente dépassée ({_ACQUIRE_TIMEOUT_S:.0f} s). Réessayez."
             )
         try:
-            with _connect() as conn:
+            with _connect(path) as conn:
                 watchdog = threading.Timer(_QUERY_TIMEOUT_S, conn.interrupt)
                 watchdog.start()
                 try:
@@ -207,14 +212,19 @@ def _configure_remote(conn: duckdb.DuckDBPyConnection, path: str) -> None:
     )
 
 
-def _connect() -> duckdb.DuckDBPyConnection:
+def _connect(path: Optional[str] = None) -> duckdb.DuckDBPyConnection:
     """Une nouvelle connexion read-only par appel. DuckDB est rapide à ouvrir
     (~ms) et les connections ne sont pas thread-safe pour des queries concurrentes,
     donc on évite de partager. La page cache OS fait le travail de mise en cache.
 
+    `path` = le parquet que la requête va lire (défaut : stock établissement) ;
+    il détermine s'il faut activer httpfs — la connexion doit être configurée pour
+    le parquet RÉELLEMENT lu, pas pour le stock par défaut (sinon un stock unité
+    légale en s3:// serait lu sans credential).
+
     Si le parquet est distant (s3:// ou https://), active httpfs sur la connexion."""
     conn = duckdb.connect(database=":memory:", read_only=False)
-    path = parquet_path()
+    path = path or parquet_path()
     if _is_remote(path):
         _configure_remote(conn, path)
     return conn
@@ -299,6 +309,107 @@ def lookup_sieges(sirens: Iterable[str]) -> dict[str, dict[str, Any]]:
     )
     rows = _query(sql, uniq, fetch="all")
     cols = _output_columns()
+    out: dict[str, dict[str, Any]] = {}
+    for r in rows:
+        d = _row_to_dict(r, cols)
+        out[d["siren"]] = d
+    return out
+
+
+# --- Stock UNITÉ LÉGALE (second parquet INSEE) --------------------------------
+# Distinct du stock établissement : il porte ce qui qualifie l'ENTREPRISE, pas son
+# implantation — au premier chef `categorieEntreprise` (PME/ETI/GE), que l'INSEE
+# calcule sur le périmètre GROUPE. C'est LA donnée qui distingue une PME autonome
+# d'une filiale : GTIE Rennes pèse 8 M€ pour une tranche d'effectif 20-49 (donc
+# « petite » vue de l'établissement) et sort pourtant en GE, parce qu'elle
+# appartient à VINCI. Aucune colonne du stock établissement ne porte cette
+# information — d'où ce second stock plutôt qu'une colonne de plus.
+
+UL_DEFAULT_PATH = "/data/sirene/unites_legales.parquet"
+
+
+def ul_parquet_path() -> str:
+    return os.environ.get("SIRENE_UL_PARQUET_PATH", UL_DEFAULT_PATH)
+
+
+def ul_stock_available() -> bool:
+    """Le stock unité légale est-il monté sur cette instance ?
+
+    Un consommateur DOIT pouvoir dire « ce filtre n'est pas servi ici » plutôt que
+    de rendre un résultat non filtré qui passerait pour filtré (même règle que
+    `_sirene_sieges` côté FOD).
+    """
+    p = ul_parquet_path()
+    return _is_remote(p) or os.path.exists(p)
+
+
+# Colonnes parquet INSEE → snake_case stable côté API. Les champs de PERSONNE
+# PHYSIQUE (sexe, prénoms, pseudonyme) sont volontairement hors mapping : ce stock
+# sert la qualification d'entreprises, les exposer serait de la donnée personnelle
+# transportée sans usage.
+_UL_COLUMN_MAP = {
+    "siren": "siren",
+    "statutDiffusionUniteLegale": "statut_diffusion",
+    "etatAdministratifUniteLegale": "etat",
+    "dateCreationUniteLegale": "date_creation",
+    "dateDebut": "date_debut",
+    "denominationUniteLegale": "denomination",
+    "nomUniteLegale": "nom",
+    "nomUsageUniteLegale": "nom_usage",
+    "sigleUniteLegale": "sigle",
+    "categorieEntreprise": "categorie_entreprise",
+    "anneeCategorieEntreprise": "annee_categorie_entreprise",
+    "trancheEffectifsUniteLegale": "tranche_effectifs",
+    "anneeEffectifsUniteLegale": "annee_effectifs",
+    "categorieJuridiqueUniteLegale": "categorie_juridique",
+    "activitePrincipaleUniteLegale": "naf",
+    "nomenclatureActivitePrincipaleUniteLegale": "naf_nomenclature",
+    "nicSiegeUniteLegale": "nic_siege",
+    "economieSocialeSolidaireUniteLegale": "ess",
+    "societeMissionUniteLegale": "societe_mission",
+    "caractereEmployeurUniteLegale": "caractere_employeur",
+    "identifiantAssociationUniteLegale": "identifiant_association",
+}
+
+_UL_SELECT_CLAUSE = ", ".join(f'"{src}" AS {dst}' for src, dst in _UL_COLUMN_MAP.items())
+
+
+def _ul_from_parquet() -> str:
+    return f"read_parquet('{ul_parquet_path()}')"
+
+
+def _ul_output_columns() -> list[str]:
+    return list(_UL_COLUMN_MAP.values())
+
+
+def lookup_unite_legale(siren: str) -> Optional[dict[str, Any]]:
+    """Unité légale d'un SIREN, ou None. Voir `lookup_unites_legales` pour une liste."""
+    return lookup_unites_legales([siren]).get(str(siren).strip())
+
+
+def lookup_unites_legales(sirens: Iterable[str]) -> dict[str, dict[str, Any]]:
+    """Unités légales d'une LISTE de SIREN en UNE requête (1 scan, pas N).
+
+    Pendant exact de `lookup_sieges` sur l'autre stock. Renvoie {siren: dict} ;
+    les SIRENs introuvables sont absents du dict (jamais une entrée vide, qui se
+    confondrait avec « catégorie inconnue »).
+
+    Le `QUALIFY` est une ceinture : le stock INSEE porte la période COURANTE, donc
+    une ligne par SIREN — mais rien dans le fichier ne le garantit, et un doublon
+    silencieux dupliquerait des lignes chez l'appelant qui joint.
+    """
+    uniq = [s for s in dict.fromkeys(str(x).strip() for x in sirens) if s]
+    if not uniq:
+        return {}
+    placeholders = ", ".join("?" * len(uniq))
+    sql = (
+        f"SELECT {_UL_SELECT_CLAUSE} FROM {_ul_from_parquet()} "
+        f"WHERE siren IN ({placeholders}) "
+        "QUALIFY ROW_NUMBER() OVER "
+        "(PARTITION BY siren ORDER BY dateDebut DESC NULLS LAST) = 1"
+    )
+    rows = _query(sql, uniq, fetch="all", path=ul_parquet_path())
+    cols = _ul_output_columns()
     out: dict[str, dict[str, Any]] = {}
     for r in rows:
         d = _row_to_dict(r, cols)
