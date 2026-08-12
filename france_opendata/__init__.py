@@ -28,6 +28,12 @@
 - AidesClient       : aides publiques aux entreprises (data.aides-entreprises.fr, dumps quotidiens en cache TTL) — filtre géo hiérarchique + effectif + nature + échéance — sans clé
 - acco (module)     : accords d'entreprise (base nationale des accords collectifs, DILA, depuis 09/2017) — parser `acco.parse_acco` + crawler `acco_ingest`, extra [stock] (defusedxml). Stockage/recherche au consommateur (oto-backend = PostgreSQL).
 
+Honnêteté de la donnée servie (une valeur qu'on ne peut pas servir telle quelle est
+MARQUÉE, jamais corrigée ni tue) — trois modules purs, sans I/O :
+- alertes (module)  : le vocabulaire FERMÉ des codes d'alerte + la certitude que chacun engage (prouvé vs inféré). Contrat lu par du code, publié dans l'OpenAPI du service.
+- finances (module) : bloc `finances` de Recherche Entreprises — le 0 code l'absence, l'unité du dépôt n'est pas transmise. Appliqué par `EntreprisesClient`.
+- liasse (module)   : liasse INPI — la sentinelle INT32 du parquet confond « poste absent » et « montant qui a débordé ». Appliqué par `InpiClient`.
+
 Lib autonome (dépend de `requests` uniquement). Source unique partagée entre projets
 (remplace la duplication des connecteurs).
 """

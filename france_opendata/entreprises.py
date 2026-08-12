@@ -13,6 +13,8 @@ from typing import Optional, List, Dict, Any
 
 import requests
 
+from . import finances
+
 
 class EntreprisesClient:
     """
@@ -148,7 +150,11 @@ class EntreprisesClient:
             # classer (ex. drop Sentry) au lieu de l'avaler en Exception nue.
             raise requests.HTTPError(error_msg, response=resp)
 
-        return resp.json()
+        data = resp.json()
+        results = data.get("results")
+        if isinstance(results, list):
+            data["results"] = [finances.annotate_company(r) for r in results]
+        return data
 
     def get_by_siren(self, siren: str) -> Optional[Dict[str, Any]]:
         """
@@ -180,9 +186,9 @@ class EntreprisesClient:
         # Find exact SIREN match
         for r in results:
             if r.get("siren") == siren:
-                return r
+                return finances.annotate_company(r)
 
-        return results[0] if results else None
+        return finances.annotate_company(results[0]) if results else None
 
     def get_directors(self, siren: str) -> List[Dict[str, Any]]:
         """

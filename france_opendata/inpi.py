@@ -11,7 +11,10 @@ httpfs, et on en dérive CA / résultat net.
 liasse** (codes de cases CERFA 2050-2053 réel normal / 2033 simplifié), PAS les ratios
 pré-calculés BdF. Ce client renvoie donc :
 - `chiffre_d_affaires`, `resultat_net` (dérivés, validés en réel normal) ;
-- `liasse` : tous les postes bruts `{code: valeur}` (l'agent/consommateur décide).
+- `liasse` : les postes bruts LISIBLES `{code: valeur}` (l'agent/consommateur décide) ;
+- `postes_indisponibles` + `alerte` : les postes présents au dépôt dont la valeur
+  n'est pas lisible (sentinelle INT32 du parquet). Additif — cf. module `liasse`
+  et #10 : sans eux, un poste débordé est indistinguable d'un poste jamais déposé.
 Les **ratios complets** (EBE/EBIT/marges/autonomie/endettement/liquidité…), notamment
 le mapping **simplifié 2033**, sont **différés** à une passe dédiée validée (un code
 faux = chiffre faux en silence). cf. issue #4.
@@ -28,9 +31,7 @@ import datetime as _dt
 import os
 from typing import Any, Optional
 
-# Valeur sentinelle « poste manquant / masqué » dans le parquet (INT32_MAX), à traiter
-# comme NULL (sinon les agrégats explosent — vérifié sur des bilans réels).
-_MISSING = 2147483647
+from . import liasse
 
 DEFAULT_PARQUET_URL = "https://www.data.gouv.fr/api/1/datasets/r/c4ac8f98-2c97-4417-9070-0cbb9de03875"
 
@@ -99,11 +100,6 @@ class InpiClient:
         return f"read_parquet('{self._path}')"
 
     @staticmethod
-    def _clean(liasse: dict) -> dict[str, int]:
-        """MAP brute → {code: valeur}, sentinelle/none retirées."""
-        return {k: v for k, v in (liasse or {}).items() if v is not None and v != _MISSING}
-
-    @staticmethod
     def _ca(type_bilan: str, postes: dict[str, int]) -> Optional[int]:
         if type_bilan in ("C", "K"):
             return postes.get(_CA_CODE_RN)
@@ -138,8 +134,9 @@ class InpiClient:
         best: dict[str, dict] = {}
         for r in rows:
             d = dict(zip(cols, r))
-            postes = self._clean(d.pop("liasse"))
+            postes, indisponibles = liasse.split(d.pop("liasse"))
             d["chiffre_d_affaires"] = self._ca(d["type_bilan"], postes)
+            liasse.annotate(d, postes, indisponibles)
             key = d["date_cloture_exercice"]
             if key not in best or _TYPE_RANK.get(d["type_bilan"], 9) < _TYPE_RANK.get(best[key]["type_bilan"], 9):
                 best[key] = d
@@ -149,8 +146,10 @@ class InpiClient:
         """Un bilan par SIREN + date de clôture (YYYY-MM-DD).
 
         Renvoie métadonnées + chiffre_d_affaires + resultat_net (dérivés) + `liasse`
-        (tous les postes bruts code→valeur, sentinelle retirée). Préfère le bilan
-        réel normal si plusieurs types à la même date."""
+        (les postes bruts LISIBLES, code→valeur). Un poste dont la valeur n'est pas
+        lisible n'entre pas dans `liasse` (il y injecterait la sentinelle) mais est
+        nommé dans `postes_indisponibles`, avec `alerte` — cf. module `liasse`.
+        Préfère le bilan réel normal si plusieurs types à la même date."""
         sql = (
             "SELECT siren, CAST(date_cloture_exercice AS VARCHAR) AS date_cloture_exercice, "
             "type_bilan, confidentiality, liasse "
@@ -164,10 +163,11 @@ class InpiClient:
         recs = [dict(zip(cols, r)) for r in rows]
         recs.sort(key=lambda x: _TYPE_RANK.get(x["type_bilan"], 9))
         rec = recs[0]
-        postes = self._clean(rec.pop("liasse"))
+        postes, indisponibles = liasse.split(rec.pop("liasse"))
         rec["chiffre_d_affaires"] = self._ca(rec["type_bilan"], postes)
         rec["resultat_net"] = self._resultat_net(rec["type_bilan"], postes)
         rec["liasse"] = postes
+        liasse.annotate(rec, postes, indisponibles)
         return rec
 
     def info(self) -> dict[str, Any]:
