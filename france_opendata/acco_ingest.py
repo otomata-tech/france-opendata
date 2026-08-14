@@ -29,6 +29,27 @@ GLOBAL_NAME = "Freemium_acco_global_20250713-140000.tar.gz"
 
 _ARCHIVE_RE = re.compile(r"ACCO_\d{8}-\d{6}\.tar\.gz")
 _MEMBER_RE = re.compile(r"TEXT/.*ACCOTEXT\d+\.xml$")
+# `…_YYYYMMDD-HHMMSS.tar.gz` — vaut pour les hebdo comme pour le global Freemium.
+_ARCHIVE_DATE_RE = re.compile(r"_(\d{4})(\d{2})(\d{2})-\d{6}\.tar\.gz$")
+
+# Ce que la DILA impose de mentionner à qui rediffuse ces données (fiche officielle
+# `DILA_ACCO_Presentation_20171212.pdf`, servie à la racine du dump) : « Les données
+# sont réutilisables gratuitement sous licence ouverte v2.0. Les réutilisateurs
+# s'obligent à mentionner : la paternité des données (DILA) ; l'URL d'accès longue de
+# téléchargement ; le nom du fichier téléchargé ainsi que la date du fichier. »
+#
+# Deux des trois mentions se rapportent à l'ARCHIVE d'origine, pas au jeu de données :
+# elles sont donc à capter ICI, à l'ingestion, ou perdues pour toujours. C'est ce qui
+# justifie `source_archive_url` / `source_archive_date` sur chaque ligne.
+LICENCE = "Licence Ouverte v2.0 (Etalab)"
+PATERNITE = "Direction de l'information légale et administrative (DILA)"
+PRODUCTEUR = "Direction Générale du Travail, ministère du Travail"
+
+
+def archive_date(name_or_url: str) -> Optional[str]:
+    """`ACCO_20260601-140000.tar.gz` → `2026-06-01`. None si le nom ne la porte pas."""
+    m = _ARCHIVE_DATE_RE.search(name_or_url)
+    return f"{m.group(1)}-{m.group(2)}-{m.group(3)}" if m else None
 
 
 def _session() -> requests.Session:
@@ -53,9 +74,16 @@ def list_weekly_archives(sess: Optional[requests.Session] = None, since: Optiona
     return out
 
 
-def _rows_from_tar_stream(fileobj, limit: Optional[int] = None) -> Iterator[dict[str, Any]]:
-    """Itère les accords d'un flux tar.gz (membres XML métadonnées uniquement)."""
+def _rows_from_tar_stream(fileobj, source: Optional[str] = None,
+                          limit: Optional[int] = None) -> Iterator[dict[str, Any]]:
+    """Itère les accords d'un flux tar.gz (membres XML métadonnées uniquement).
+
+    `source` = l'URL longue (ou le chemin) d'où vient l'archive : reportée sur chaque
+    ligne, parce que la licence de rediffusion l'exige et qu'elle n'est plus
+    reconstituable une fois la ligne en base.
+    """
     n = 0
+    provenance = {"source_archive_url": source, "source_archive_date": archive_date(source or "")}
     with tarfile.open(fileobj=fileobj, mode="r|gz") as tar:  # r|gz = streaming, mono-passe
         for member in tar:
             if not member.isfile() or not _MEMBER_RE.search(member.name):
@@ -65,7 +93,7 @@ def _rows_from_tar_stream(fileobj, limit: Optional[int] = None) -> Iterator[dict
                 continue
             row = parse_acco(f.read())
             if row is not None:
-                yield row
+                yield {**row, **provenance}
                 n += 1
                 if limit and n >= limit:
                     return
@@ -79,7 +107,10 @@ def rows_from_archive(url_or_path: str, sess: Optional[requests.Session] = None,
         with sess.get(url_or_path, stream=True, timeout=600) as resp:
             resp.raise_for_status()
             resp.raw.decode_content = True
-            yield from _rows_from_tar_stream(resp.raw, limit=limit)
+            yield from _rows_from_tar_stream(resp.raw, source=url_or_path, limit=limit)
     else:
+        # Archive locale : on ne peut pas inventer l'URL longue dont elle vient. La
+        # provenance reste vide plutôt que reconstruite — l'ingestion nominale passe
+        # par l'URL, et une ligne sans provenance se signale au lieu de mentir.
         with open(url_or_path, "rb") as fh:
-            yield from _rows_from_tar_stream(fh, limit=limit)
+            yield from _rows_from_tar_stream(fh, source=None, limit=limit)
