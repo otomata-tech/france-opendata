@@ -23,10 +23,17 @@ from typing import Any, Iterator, Optional
 
 import requests
 
+from . import dila
 from .kali import parse_kali_article, parse_kali_conteneur
 
 BASE_URL = "https://echanges.dila.gouv.fr/OPENDATA/KALI"
 GLOBAL_NAME = "Freemium_kali_global_20250713-140000.tar.gz"
+
+# Licence et paternité sont communes aux fonds DILA → `dila`. Propre à KALI : son
+# producteur EST la DILA (≠ ACCO, produit par le ministère du Travail) — vérifié sur
+# la fiche officielle `DILA_KALI_Presentation_20170824.pdf`, racine du dump, qui pose
+# les mêmes conditions de réutilisation (licence ouverte v2.0, trois mentions).
+PRODUCTEUR = dila.PATERNITE
 
 _ARCHIVE_RE = re.compile(r"KALI_\d{8}-\d{6}\.tar\.gz")
 _CONTENEUR_RE = re.compile(r"conteneur/.*KALICONT\d+\.xml$")
@@ -55,9 +62,16 @@ def list_daily_archives(sess: Optional[requests.Session] = None, since: Optional
     return out
 
 
-def _rows_from_tar_stream(fileobj, limit: Optional[int] = None) -> Iterator[tuple[str, dict[str, Any]]]:
-    """Itère les objets KALI d'un flux tar.gz en lignes typées ("conteneur"|"article", dict)."""
+def _rows_from_tar_stream(fileobj, source: Optional[str] = None,
+                          limit: Optional[int] = None) -> Iterator[tuple[str, dict[str, Any]]]:
+    """Itère les objets KALI d'un flux tar.gz en lignes typées ("conteneur"|"article", dict).
+
+    `source` = l'URL longue d'où vient l'archive, reportée sur chaque ligne : la
+    licence de rediffusion l'exige (avec le nom du fichier et sa date), et elle n'est
+    plus reconstituable une fois la ligne en base.
+    """
     n = 0
+    provenance = dila.provenance(source)
     with tarfile.open(fileobj=fileobj, mode="r|gz") as tar:  # r|gz = streaming, mono-passe
         for member in tar:
             if not member.isfile():
@@ -73,7 +87,7 @@ def _rows_from_tar_stream(fileobj, limit: Optional[int] = None) -> Iterator[tupl
                 continue
             row = parse(f.read())
             if row is not None:
-                yield kind, row
+                yield kind, {**row, **provenance}
                 n += 1
                 if limit and n >= limit:
                     return
@@ -87,7 +101,9 @@ def rows_from_archive(url_or_path: str, sess: Optional[requests.Session] = None,
         with sess.get(url_or_path, stream=True, timeout=600) as resp:
             resp.raise_for_status()
             resp.raw.decode_content = True
-            yield from _rows_from_tar_stream(resp.raw, limit=limit)
+            yield from _rows_from_tar_stream(resp.raw, source=url_or_path, limit=limit)
     else:
+        # Archive locale : l'URL longue d'origine est inconnue. Rien n'est inventé —
+        # une ligne sans provenance se signale, elle ne s'invente pas une source.
         with open(url_or_path, "rb") as fh:
-            yield from _rows_from_tar_stream(fh, limit=limit)
+            yield from _rows_from_tar_stream(fh, source=None, limit=limit)

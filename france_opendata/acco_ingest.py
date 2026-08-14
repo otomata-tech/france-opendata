@@ -22,6 +22,7 @@ from typing import Any, Iterator, Optional
 
 import requests
 
+from . import dila
 from .acco import parse_acco
 
 BASE_URL = "https://echanges.dila.gouv.fr/OPENDATA/ACCO"
@@ -29,27 +30,11 @@ GLOBAL_NAME = "Freemium_acco_global_20250713-140000.tar.gz"
 
 _ARCHIVE_RE = re.compile(r"ACCO_\d{8}-\d{6}\.tar\.gz")
 _MEMBER_RE = re.compile(r"TEXT/.*ACCOTEXT\d+\.xml$")
-# `…_YYYYMMDD-HHMMSS.tar.gz` — vaut pour les hebdo comme pour le global Freemium.
-_ARCHIVE_DATE_RE = re.compile(r"_(\d{4})(\d{2})(\d{2})-\d{6}\.tar\.gz$")
 
-# Ce que la DILA impose de mentionner à qui rediffuse ces données (fiche officielle
-# `DILA_ACCO_Presentation_20171212.pdf`, servie à la racine du dump) : « Les données
-# sont réutilisables gratuitement sous licence ouverte v2.0. Les réutilisateurs
-# s'obligent à mentionner : la paternité des données (DILA) ; l'URL d'accès longue de
-# téléchargement ; le nom du fichier téléchargé ainsi que la date du fichier. »
-#
-# Deux des trois mentions se rapportent à l'ARCHIVE d'origine, pas au jeu de données :
-# elles sont donc à capter ICI, à l'ingestion, ou perdues pour toujours. C'est ce qui
-# justifie `source_archive_url` / `source_archive_date` sur chaque ligne.
-LICENCE = "Licence Ouverte v2.0 (Etalab)"
-PATERNITE = "Direction de l'information légale et administrative (DILA)"
+# Licence, paternité et forme des archives sont communes aux fonds DILA → `dila`.
+# Ce qui est PROPRE à ACCO : son producteur. La DILA diffuse, le ministère produit
+# (fiche officielle `DILA_ACCO_Presentation_20171212.pdf`, racine du dump).
 PRODUCTEUR = "Direction Générale du Travail, ministère du Travail"
-
-
-def archive_date(name_or_url: str) -> Optional[str]:
-    """`ACCO_20260601-140000.tar.gz` → `2026-06-01`. None si le nom ne la porte pas."""
-    m = _ARCHIVE_DATE_RE.search(name_or_url)
-    return f"{m.group(1)}-{m.group(2)}-{m.group(3)}" if m else None
 
 
 def _session() -> requests.Session:
@@ -83,7 +68,7 @@ def _rows_from_tar_stream(fileobj, source: Optional[str] = None,
     reconstituable une fois la ligne en base.
     """
     n = 0
-    provenance = {"source_archive_url": source, "source_archive_date": archive_date(source or "")}
+    provenance = dila.provenance(source)
     with tarfile.open(fileobj=fileobj, mode="r|gz") as tar:  # r|gz = streaming, mono-passe
         for member in tar:
             if not member.isfile() or not _MEMBER_RE.search(member.name):
