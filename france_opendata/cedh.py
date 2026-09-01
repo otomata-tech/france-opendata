@@ -13,6 +13,8 @@ Adapté de `scrape_cedh.py` de justicelibre (MIT).
 """
 from __future__ import annotations
 
+from . import valeurs
+
 import html as _html
 import re
 from typing import Any, Iterator, Optional
@@ -88,13 +90,13 @@ def iter_decisions(year: int, sess: Optional[requests.Session] = None,
                 continue
             yield {
                 "id": itemid,
-                "titre": c.get("docname") or None,
+                "titre": valeurs.texte(c.get("docname")),
                 "juridiction": "Cour européenne des droits de l'homme",
-                "numero": c.get("respondent") or None,
-                "date_dec": (c.get("kpdate") or "")[:10] or None,
-                "solution": (c.get("conclusion") or "")[:500] or None,
-                "formation": c.get("originatingbody_name") or None,
-                "ecli": c.get("ecli") or None,
+                "numero": valeurs.texte(c.get("respondent")),
+                "date_dec": (valeurs.texte(c.get("kpdate")) or "")[:10] or None,
+                "solution": (valeurs.texte(c.get("conclusion")) or "")[:500] or None,
+                "formation": valeurs.texte(c.get("originatingbody_name")),
+                "ecli": valeurs.texte(c.get("ecli")),
                 "texte": fetch_text(itemid, sess) if with_text else "",
             }
         start += BATCH

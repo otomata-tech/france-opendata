@@ -18,6 +18,8 @@ Adapté de `judilibre_sync.py` de justicelibre (MIT) — avec NOS credentials.
 """
 from __future__ import annotations
 
+from . import valeurs
+
 import os
 import time
 from typing import Any, Iterator, Optional
@@ -128,12 +130,12 @@ def _map(d: dict) -> dict[str, Any]:
         tas = tas[0] if tas else {}
     return {
         "id": d["id"],
-        "titre": (tas or {}).get("title") or d.get("summary") or None,
+        "titre": valeurs.texte((tas or {}).get("title")) or valeurs.texte(d.get("summary")),
         "juridiction": juridiction or None,
-        "numero": d.get("number") or None,
-        "date_dec": (d.get("decision_date") or "")[:10] or None,
-        "solution": d.get("solution") or None,
-        "formation": d.get("chamber") or d.get("formation") or None,
-        "ecli": d.get("ecli") or None,
-        "texte": d.get("text") or "",
+        "numero": valeurs.texte(d.get("number")),
+        "date_dec": (valeurs.texte(d.get("decision_date")) or "")[:10] or None,
+        "solution": valeurs.texte(d.get("solution")),
+        "formation": d.get("chamber") or valeurs.texte(d.get("formation")),
+        "ecli": valeurs.texte(d.get("ecli")),
+        "texte": valeurs.texte(d.get("text")) or "",
     }

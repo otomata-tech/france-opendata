@@ -16,6 +16,8 @@ Adapté de `download_opendata.py` de justicelibre (MIT).
 """
 from __future__ import annotations
 
+from . import valeurs
+
 from typing import Any, Iterator, Optional
 from urllib.parse import quote
 
@@ -75,12 +77,12 @@ def iter_decisions(juri: str, date_start: str, date_end: str,
             continue
         yield {
             "id": _id,
-            "titre": src.get("Titre") or None,
-            "juridiction": src.get("Nom_Juridiction") or juri,
-            "numero": src.get("Numero_Dossier") or None,
-            "date_dec": (src.get("Date_Lecture") or "")[:10] or None,
-            "solution": src.get("Type_Decision") or None,
-            "formation": src.get("Formation_Jugement") or None,
-            "ecli": src.get("Numero_ECLI") or None,
+            "titre": valeurs.texte(src.get("Titre")),
+            "juridiction": valeurs.texte(src.get("Nom_Juridiction")) or juri,
+            "numero": valeurs.texte(src.get("Numero_Dossier")),
+            "date_dec": (valeurs.texte(src.get("Date_Lecture")) or "")[:10] or None,
+            "solution": valeurs.texte(src.get("Type_Decision")),
+            "formation": valeurs.texte(src.get("Formation_Jugement")),
+            "ecli": valeurs.texte(src.get("Numero_ECLI")),
             "texte": fetch_text(_id, sess) if with_text else "",
         }
