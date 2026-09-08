@@ -51,6 +51,7 @@ from .sitadel import SitadelClient
 from .georisques import GeorisquesClient
 from .enedis import EnedisClient
 from .odre import OdreClient
+from . import resolution  # noqa: F401  (rapprochement site → établissement)
 from .ban import BanClient
 from .apicarto import ApiCartoClient
 from .pvgis import PvgisClient

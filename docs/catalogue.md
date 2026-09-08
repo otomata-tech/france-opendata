@@ -76,6 +76,7 @@ donne + clé + exposition oto + statut. Le détail par client vit dans son modul
 | Client | Source | Donne |
 |---|---|---|
 | `OpendatasoftClient` | tout portail Opendatasoft Explore v2.1 | client générique (datasets ODS publics) |
+| `geo.lambert93` / `resolution` | — | projeter WGS84 → Lambert 93 (stdlib) et rapprocher un SITE (adresse, point) d'un ÉTABLISSEMENT du répertoire, par la géométrie et un second signal |
 
 ---
 
