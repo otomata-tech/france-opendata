@@ -83,3 +83,18 @@ def test_la_sortie_est_serialisable_en_json():
     import json
     lignes = [_signal(_ligne("33032", "QUAI ALFRED DE VIAL", "10", 55608.0))]
     json.dumps(agreger_par_adresse(lignes))
+
+
+def test_une_liste_tronquee_le_dit(monkeypatch):
+    """`limit` borne le pull et l'export sort par code commune : une coupe perd des
+    lignes arbitraires, pas les plus petites. Une liste tronquée qui se tait se lit
+    comme une liste complète — c'est ainsi qu'on rate le deuxième plus gros site."""
+    from france_opendata import enedis as mod
+
+    c = mod.EnedisClient()
+    monkeypatch.setattr(c.ods, "export", lambda *a, **k: [
+        _ligne("33003", "RUE A", "20", 100.0), _ligne("33554", "RUE B", "20", 41979.0)])
+    r = c.consommation_par_adresse("2024", dept="33", limit=2)
+    assert r["tronque"] is True and "min_mwh" in r["avertissement_troncature"]
+    r2 = c.consommation_par_adresse("2024", dept="33", limit=-1)
+    assert r2["tronque"] is False and r2["avertissement_troncature"] is None

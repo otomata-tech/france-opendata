@@ -141,6 +141,13 @@ class EnedisClient:
             parts.append(f"consommation_annuelle_totale_de_ladresse_mwh<={max_mwh}")
         where = " AND ".join(parts)
         rows = self.ods.export(DATASET, "json", where=where, limit=limit)
+        # `limit` borne le PULL, et l'export sort dans l'ordre du jeu (par code commune),
+        # pas par consommation : une coupe y perd des lignes arbitraires, pas les plus
+        # petites. Mesuré sur la Gironde au défaut de 200 — 20 lignes perdues, dont la
+        # deuxième plus grosse du département à 41 979 MWh. On ne peut pas trier au
+        # serveur sur cet endpoint : on le DIT, pour qu'une liste tronquée ne se lise
+        # jamais comme une liste complète.
+        tronque = limit is not None and limit >= 0 and len(rows) >= limit
         signals = []
         ignorees, mwh_ignores = 0, 0.0
         for r in rows:
@@ -155,6 +162,11 @@ class EnedisClient:
         return {
             "total": len(signals),
             "signals": signals,
+            "tronque": tronque,
+            "avertissement_troncature": (
+                "la coupe suit l'ordre du jeu (code commune), pas la consommation : "
+                "remonter `min_mwh` plutôt que baisser `limit`, ou passer limit=-1"
+            ) if tronque else None,
             # Additif : ce que le filtre a ramené mais qu'on ne peut pas localiser.
             "lignes_ignorees": ignorees,
             "mwh_ignores": round(mwh_ignores, 3),
