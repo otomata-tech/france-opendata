@@ -22,6 +22,22 @@ livraison dans l'IRIS : la valeur EST celle d'un site, et l'IRIS le localise. Au
 c'est une somme et le champ `maille` le dit (`site` / `iris_agrege`) — la convention de
 la maison est de marquer ce qu'on ne peut pas servir, pas de le taire.
 
+⚠️ **EGRESS — à tester depuis la box de prod AVANT de s'y fier.** Ce portail est servi
+par `odre.opendatasoft.com`, et `docs/catalogue.md` documente que `*.opendatasoft.com`
+**bloque les IP datacenter** (timeout TCP avant TLS — ni une URL ni un User-Agent en
+cause) : c'est pour cette raison que BOAMP lit le dump DILA plutôt que son portail ODS.
+Le domaine propre `opendata.reseaux-energies.fr` ne sauve rien, il redirige vers le même
+hôte, et data.gouv n'héberge aucun miroir — ses sept ressources pointent toutes là.
+Rien ici ne détectera le blocage : ça marche depuis un poste de dev et ça échoue en prod.
+
+    curl -sS -m 20 -o /dev/null -w '%{http_code}\n' \
+      'https://odre.opendatasoft.com/api/explore/v2.1/catalog/datasets/consommation-annuelle-par-iris/records?limit=1'
+
+Si la box est bloquée, le repli est celui que la maison applique déjà à l'IRIS INSEE :
+ingérer une fois en parquet compact **bundlé dans le paquet** (cf. `insee_iris_ingest.py`).
+Le jeu s'y prête — 17 891 lignes, un millésime par an, aucune fraîcheur intra-annuelle à
+préserver.
+
 Gotchas :
 - `annee` est un champ **DATE**, pas une chaîne : le filtre s'écrit `year(annee)=2023`.
   `annee="2023"` rend un **400**, sans autre explication.
