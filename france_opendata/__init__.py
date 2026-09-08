@@ -11,6 +11,8 @@
 - SireneClient      : INSEE Sirene (SIRET, siège) — clé via env SIRENE_API_KEY
 - GeorisquesClient  : Géorisques — ICPE (régime, IED, Seveso, DREAL) + risques naturels d'une commune (GASPAR) + aléa argiles (RGA) — sans clé
 - EnedisClient      : Enedis conso élec annuelle par adresse (signaux MWh) — sans clé
+- OdreClient        : ODRÉ conso élec des sites raccordés au réseau de TRANSPORT (RTE)
+                      — l'étage qu'Enedis ne voit pas, sans clé
 - BanClient         : Base Adresse Nationale (géocodage / reverse) — sans clé
 - ApiCartoClient    : cadastre IGN (parcelle en un point/géométrie), WFS Géoplateforme — sans clé
 - PvgisClient       : PVGIS JRC (productible solaire annuel pour un point + kWc) — sans clé
@@ -48,6 +50,7 @@ from .bdtopo import BdTopoClient
 from .sitadel import SitadelClient
 from .georisques import GeorisquesClient
 from .enedis import EnedisClient
+from .odre import OdreClient
 from .ban import BanClient
 from .apicarto import ApiCartoClient
 from .pvgis import PvgisClient
@@ -70,7 +73,7 @@ from .aides import AidesClient
 
 __all__ = ["EntreprisesClient", "SireneClient", "InpiClient", "BodaccClient", "BoampClient", "DvfClient", "DpeClient",
            "BdTopoClient", "SitadelClient", "GeorisquesClient",
-           "EnedisClient", "BanClient", "ApiCartoClient", "PvgisClient",
+           "EnedisClient", "OdreClient", "BanClient", "ApiCartoClient", "PvgisClient",
            "IgnClient", "OverpassClient", "GpuClient", "QpvClient", "InseeMelodiClient", "InseeIrisClient", "EpfifClient",
            "OpendatasoftClient", "SpectacleClient", "FinessClient", "HasEssmsClient",
            "EgaproClient", "FrenchTechClient", "AidesClient"]

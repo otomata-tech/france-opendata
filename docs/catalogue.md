@@ -48,7 +48,8 @@ donne + clé + exposition oto + statut. Le détail par client vit dans son modul
 
 | Client | Source | Donne | Clé |
 |---|---|---|---|
-| `EnedisClient` | Enedis open data | conso élec annuelle par adresse (signaux MWh) | — |
+| `EnedisClient` | Enedis open data | conso élec annuelle par adresse (signaux MWh) — réseau de **distribution** (BT/HTA) | — |
+| `OdreClient` | ODRÉ (RTE, NaTran, Teréga) | conso élec annuelle des sites raccordés au réseau de **transport**, maille IRIS — l'étage qu'Enedis ne voit pas | — |
 | `PvgisClient` | PVGIS JRC (Commission Européenne) | productible solaire annuel (point + kWc) | — |
 
 ## 6. Socio-démographie & territoire — namespace oto `urba_*`
