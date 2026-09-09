@@ -24,6 +24,7 @@ donne + clé + exposition oto + statut. Le détail par client vit dans son modul
 | Client | Source | Donne | Clé |
 |---|---|---|---|
 | `DvfClient` | DVF+ Cerema (depuis 2014) | transactions immobilières brutes, comparables €/m², stats commune | — |
+| `DpeTertiaireClient` | DPE tertiaire ADEME (DataFair, depuis juillet 2021) | ~560 000 diagnostics NON résidentiels : secteur ERP, surface SHON, étiquettes, coordonnées **déjà en Lambert 93**, `id_rnb` | — |
 | `DpeClient` | DPE ADEME (DataFair, depuis 2021) | ~15 M diagnostics énergétiques géocodés BAN (étiquette A-G, conso, GES) ; tools `foncier_dpe_*` + flag `with_dpe` sur les comparables | — |
 | `BanClient` | Base Adresse Nationale | géocodage / reverse | — |
 | `ApiCartoClient` | IGN API Carto | parcelle cadastrale (point/géométrie) | — |
@@ -48,8 +49,10 @@ donne + clé + exposition oto + statut. Le détail par client vit dans son modul
 
 | Client | Source | Donne | Clé |
 |---|---|---|---|
-| `EnedisClient` | Enedis open data | conso élec annuelle par adresse (signaux MWh) | — |
+| `EnedisClient` | Enedis open data | conso élec annuelle par adresse (signaux MWh) — réseau de **distribution** (BT/HTA) | — |
+| `OdreClient` | ODRÉ (RTE, NaTran, Teréga) | conso élec annuelle des sites raccordés au réseau de **transport**, maille IRIS — l'étage qu'Enedis ne voit pas | — |
 | `PvgisClient` | PVGIS JRC (Commission Européenne) | productible solaire annuel (point + kWc) | — |
+| `BegesClient` | ADEME DataFair, `9nd9avrbto3l14md-wkode4o` | bilans GES déclarés (~11 800, dont ~7 000 obligés) — **clé SIREN**, émissions par catégorie | — |
 
 ## 6. Socio-démographie & territoire — namespace oto `urba_*`
 
@@ -75,6 +78,7 @@ donne + clé + exposition oto + statut. Le détail par client vit dans son modul
 | Client | Source | Donne |
 |---|---|---|
 | `OpendatasoftClient` | tout portail Opendatasoft Explore v2.1 | client générique (datasets ODS publics) |
+| `geo.lambert93` / `resolution` | — | projeter WGS84 → Lambert 93 (stdlib) et rapprocher un SITE (adresse, point) d'un ÉTABLISSEMENT du répertoire, par la géométrie et un second signal |
 
 ---
 
@@ -92,8 +96,9 @@ Repérés via le MCP data.gouv.fr (2026-06-24), par ordre d'intérêt :
 | **DECP** | Données Essentielles de la Commande Publique | complément/alternative à BOAMP (commande publique structurée) | data.gouv / API |
 | **RNA** | Répertoire National des Associations (Min. Intérieur) | élargit l'univers entités au-delà des entreprises (~1,5 M assos loi 1901, + ARUP) | dump national / agrégé |
 | **BANCO** | Base Nationale des Commerces Ouverte | commerces géolocalisés (OSM) → prospection locale | dump |
-| **BDNB** | Base nationale des bâtiments (CSTB) | bâti + DPE + rénovation par bâtiment → complète BDTOPO | dump |
-| DPE tertiaire / Base Carbone | ADEME DataFair | DPE bâtiments publics ; facteurs d'émission GES | API REST |
+| Base Carbone | ADEME DataFair (`base-carboner`, 18 616 lignes) | facteurs d'émission GES | API REST |
+| **BDNB** | CSTB — `api.bdnb.io` **répond** (vérifié 09/09/2026) | bâti + DPE + rénovation par bâtiment ; se joint au DPE tertiaire par `id_rnb`, jointure EXACTE et non spatiale | API REST |
+| EU ETS / EUTL | registre européen des quotas | industrie lourde sous quotas, avec exploitant et adresse | **source machine non localisée** au 09/09/2026 — l'endpoint EEA testé rend un 404 |
 
 ---
 
