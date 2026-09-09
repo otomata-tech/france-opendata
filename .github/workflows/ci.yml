@@ -1,9 +1,18 @@
 name: CI
 
-# france-opendata n'a pas de tests → import-smoke : l'install (deps de base) résout
-# et `import france_opendata` charge tous les clients sans casser. Lib publiée PyPI
-# + consommée en prod (oto-backend/cli/tuls) → catch un import mort avant release.
-# Actions épinglées par SHA (supply-chain). Cf. otomata-private#39 (#5 + #6).
+# Le job `test` execute la suite de tests du depot.
+#
+# Il ne l'executait pas. Jusqu'au 09/09/2026 il se contentait d'un
+# `python -c "import france_opendata"`, sur la foi d'un commentaire disant que le
+# depot n'avait pas de tests. C'etait vrai a la redaction, plus depuis longtemps :
+# `tests/` contenait 22 fichiers qui n'avaient jamais tourne une seule fois, et le
+# job affichait vert sous le nom `test`. Un controle vert qui n'a rien controle
+# vaut moins que pas de controle — meme mode d'echec que le CLA repare le meme
+# jour (voir .github/workflows/cla.yml).
+#
+# Le smoke d'import reste, en plus : il attrape un client mort a l'install, avant
+# meme la collecte des tests. La lib est publiee sur PyPI et consommee en prod.
+# Actions epinglees par SHA (supply-chain). Cf. otomata-private#39 (#5 + #6).
 on:
   pull_request:
     branches: [master]
@@ -20,6 +29,13 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install
-        run: pip install .
+        # Les extras sont necessaires a la SUITE, pas a la lib : les tests du
+        # stock SIRENE importent duckdb, ceux de la provenance DILA defusedxml.
+        # Sans eux, la collecte casse au lieu de tester.
+        run: pip install ".[stock,sante]" pytest
       - name: Smoke (import du package)
         run: python -c "import france_opendata; print('OK', france_opendata.__name__)"
+      - name: Tests
+        # Une suite vide fait sortir pytest en code 5, donc ROUGIR ce job : si
+        # plus rien n'est collecte un jour, on doit le voir, pas passer au vert.
+        run: pytest -q --strict-markers
