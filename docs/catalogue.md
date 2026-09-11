@@ -19,7 +19,7 @@ donne + clé + exposition oto + statut. Le détail par client vit dans son modul
 | `BodaccClient` | BODACC | créations, ventes, procédures collectives | — |
 | `BoampClient` | BOAMP (dump DILA → parquet DuckDB) | avis de marchés publics | — · extra `[stock]` (OpenDataSoft bloquait les IP datacenter → lecture du dump DILA, issue #3 résolue) |
 
-| `DecpClient` | DECP — data.economie.gouv.fr | marchés publics **attribués** : titulaire (SIRET), montant, notification, durée — l'issue, là où BOAMP ne donne que l'avis. ⚠️ SIRET stocké en nombre ; pas de dénomination pour le titulaire principal | SIRET | `fr_tenders_awarded` |
+| `DecpClient` | DECP — data.economie.gouv.fr | marchés publics **attribués** : titulaire (SIRET), montant, notification, durée — l'issue, là où BOAMP ne donne que l'avis. ⚠️ SIRET stocké en nombre ; pas de dénomination pour le titulaire principal | SIRET | `fr_tenders_search(op="awarded")` |
 
 ## 2. Immobilier, foncier, cadastre — namespace oto `foncier_*`
 
@@ -48,7 +48,7 @@ donne + clé + exposition oto + statut. Le détail par client vit dans son modul
 | Client | Source | Donne | Clé | oto |
 |---|---|---|---|---|
 | `GeorisquesClient` | Géorisques | ICPE (régime, IED, Seveso, DREAL) + risques naturels (GASPAR) + aléa argiles (RGA) | — | `foncier_icpe`, `urba_risques`/`urba_argiles` |
-| `IrepClient` | Géorisques — registre IREP (ZIP annuel) | émissions déclarées **par établissement**, avec SIRET et coordonnées — le CO2 du SITE, là où BEGES ne donne que l'organisation entière. ⚠️ 89 % des quantités valent « < seuil » | SIRET | `foncier_emissions` |
+| `IrepClient` | Géorisques — registre IREP (ZIP annuel) | émissions déclarées **par établissement**, avec SIRET et coordonnées — le CO2 du SITE, là où BEGES ne donne que l'organisation entière. ⚠️ 89 % des quantités valent « < seuil » | SIRET | `foncier_icpe(op="emissions")` |
 
 ## 5. Énergie — namespace oto `foncier_*`
 
@@ -65,7 +65,7 @@ donne + clé + exposition oto + statut. Le détail par client vit dans son modul
 |---|---|---|---|
 | `InseeMelodiClient` | INSEE Mélodi | données locales par commune (population, familles, revenus, logement) | — |
 
-| `ElusClient` | Répertoire National des Élus (Min. Intérieur) | maires par commune, présidents d'EPCI, avec la date de prise de fonction — **sans** date de naissance ni sexe, écartés à la lecture | INSEE / SIREN EPCI | `urba_elus` |
+| `ElusClient` | Répertoire National des Élus (Min. Intérieur) | maires par commune, présidents d'EPCI, avec la date de prise de fonction — **sans** date de naissance ni sexe, écartés à la lecture | INSEE / SIREN EPCI | `urba_annuaire(op="maires" \| "presidents_epci")` |
 | `LannuaireClient` | Annuaire de l'administration (DILA) | services publics : standard, courriel, site, et le **responsable nommé** avec sa fonction | SIREN / INSEE | `urba_annuaire` |
 
 ## 7. Culture — namespace oto `culture_*`
