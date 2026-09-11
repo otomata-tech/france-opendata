@@ -97,10 +97,38 @@ Repérés via le MCP data.gouv.fr (2026-06-24), par ordre d'intérêt :
 | **RNA** | Répertoire National des Associations (Min. Intérieur) | élargit l'univers entités au-delà des entreprises (~1,5 M assos loi 1901, + ARUP) | dump national / agrégé |
 | **BANCO** | Base Nationale des Commerces Ouverte | commerces géolocalisés (OSM) → prospection locale | dump |
 | Base Carbone | ADEME DataFair (`base-carboner`, 18 616 lignes) | facteurs d'émission GES | API REST |
-| **BDNB** | CSTB — `api.bdnb.io` **répond** (vérifié 09/09/2026) | bâti + DPE + rénovation par bâtiment ; se joint au DPE tertiaire par `id_rnb`, jointure EXACTE et non spatiale | API REST |
+| **BDNB** | CSTB — `api.bdnb.io` **répond** (vérifié 09/09/2026) | **le seul lien bâtiment → propriétaire personne morale avec SIREN** (tables `proprietaire` + `rel_batiment_groupe_proprietaire`, propriétaire principal = tri `nb_locaux_open` desc puis dédoublonnage) — aujourd'hui rien dans la lib ne relie un lieu à son propriétaire. Plus bâti, DPE, rénovation. Se joint au DPE tertiaire par `id_rnb`, jointure EXACTE et non spatiale. ⚠️ couverture **59 %** des grands bâtiments pros : les personnes physiques sont anonymisées à la source par la DGFiP (MAJIC) — à MARQUER, pas à taire | API REST |
+| **IREP** | Registre des émissions polluantes — `files.georisques.fr/irep/<annee>.zip` | CO2 **par établissement**, avec SIRET et coordonnées : désigne *quel* site d'un grand compte, là où BEGES ne donne que la structure entière | ZIP annuel (`files.georisques.fr`, OK datacenter) |
+| **Annuaire de l'administration** | DILA — `api-lannuaire.service-public.fr` | contacts d'administrations par SIREN **avec responsable nommé et sa fonction** ; sur cible publique, remplace un enrichissement payant | ODS ⚠️ tester l'egress |
+| **Répertoire national des élus** | Min. Intérieur, data.gouv | maires par code INSEE, présidents d'EPCI — le décideur d'une commune | CSV |
+| **Cartofriches** | Cerema | friches avec propriétaire publié, surface, pollution, statut — foncier dégradé, prioritaire aux AO | data.gouv CSV |
+| **Registre RTE des installations de production** | ODRÉ `registre-national-installation-production-stockage-electricite-agrege` | parc électrique **nominatif** > 36 kW : énergie injectée sur 12 mois glissants, poste source, date de mise en service → « déjà équipé », détection de sous-performance, fins d'obligation d'achat 2026-2031 | ODS ⚠️ même portail qu'`odre.py`, donc même risque d'egress |
 | EU ETS / EUTL | registre européen des quotas | industrie lourde sous quotas, avec exploitant et adresse | **source machine non localisée** au 09/09/2026 — l'endpoint EEA testé rend un 404 |
 
 ---
+
+## Lacunes sur des connecteurs déjà branchés
+
+Relevé le 11/09/2026 lors d'une revue de couverture. Ce sont des **extensions**, pas de nouveaux
+namespaces — coût sans commune mesure avec un candidat ci-dessus.
+
+- **`foncier_icpe` jette les rubriques.** Géorisques les renvoie, la whitelist `_ICPE_KEEP`
+  (oto-backend, `tools/foncier.py`) ne les garde pas. Or les rubriques **2910 / 3110** (combustion)
+  et **4735 / 2921** (froid) sont les meilleurs proxys de gros consommateur quand la consommation
+  manque. Vérifier d'abord si le client lib remonte la fiche complète : si oui, le correctif est
+  mono-fichier côté backend, sans passer par PyPI.
+- **BEGES ne remonte ni les contacts ni le périmètre de consolidation.** `beges.py` demande les 22
+  postes et les métadonnées. Manquent `responsable_du_suivi` / `fonction` / `telephone` / `courriel`
+  (le contact énergie, nommé et gratuit), `siren_des_entites_consolidees` (la table
+  `filiale → tête de groupe` en une requête, pour tout le pays) et `objectif_de_reduction_pour_2030`.
+  Manque surtout la valeur dérivée qui change l'usage de la source : **poste P2.1 ÷ 0,052 kgCO2e/kWh
+  = consommation électrique annuelle**. C'est la seule source publique qui relie une consommation à
+  une personne morale **nommée** — Enedis à l'adresse et RTE à l'IRIS sont l'un et l'autre anonymes,
+  et leur compte de points de livraison n'est qu'un compteur.
+
+Ordre d'attaque suggéré : ces deux extensions d'abord (effet immédiat, pas de nouveau namespace),
+puis IREP et le répertoire des élus (simples, pas de risque d'egress), puis l'annuaire DILA et DECP
+**après** avoir testé l'egress depuis la box, et BDNB en dernier — c'est le seul vrai chantier.
 
 ## ⚠️ Gotcha : joignabilité depuis datacenter
 
