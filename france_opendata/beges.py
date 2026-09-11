@@ -53,6 +53,8 @@ _SELECT = ",".join([
     "type_de_structure", "mode_de_consolidation", "region", "code_departement",
     "nombre_de_salariesdagents_de_lensemble_des_siren_declares_sur_ce_bilan_lors_de_lannee_de_reporting_du_bilan",
     "lien_url_vers_le_rapport_complet_du_beges",
+    "responsable_du_suivi", "fonction", "telephone", "courriel",
+    "siren_des_entites_consolidees", "objectif_de_reduction_pour_2030",
     *(f"emissions_publication_{p}" for cat in CATEGORIES.values() for p in cat),
 ])
 
@@ -71,6 +73,90 @@ def normaliser_siren(valeur: Any) -> Optional[str]:
     if not s.isdigit():
         return None
     return s.zfill(9) if len(s) <= 9 else s
+
+
+# Facteur d'émission moyen de l'électricité en France (Base Empreinte, ADEME).
+# Sert à LIRE le poste 2.1 à l'envers ; ce n'est pas le facteur qu'a employé le
+# déclarant, qu'on ne connaît pas.
+FE_ELECTRICITE_KGCO2E_KWH = 0.052
+
+# L'ADEME publie le champ, mais remplace la valeur quand le déclarant refuse sa
+# diffusion. Rendre « [Masqué] » comme un nom ferait un contact inexistant.
+_MASQUE = ("masqu", "non communiqu", "non renseign")
+
+
+def _clair(valeur: Any) -> Optional[str]:
+    """Rend une valeur de contact, ou None si la source l'a masquée."""
+    if valeur is None:
+        return None
+    texte = str(valeur).strip()
+    if not texte:
+        return None
+    bas = texte.lower().strip("[]() ")
+    return None if any(m in bas for m in _MASQUE) else texte
+
+
+def _contact(row: dict[str, Any]) -> Optional[dict[str, Any]]:
+    """Le responsable du suivi déclaré — la personne qui tient le sujet énergie.
+
+    Publié par l'ADEME au même titre que le bilan, et masqué à la source quand le
+    déclarant s'y oppose : un contact absent ici n'est pas un contact introuvable,
+    c'est un refus de diffusion, et les deux ne se traitent pas pareil.
+    """
+    contact = {
+        "nom": _clair(row.get("responsable_du_suivi")),
+        "fonction": _clair(row.get("fonction")),
+        "telephone": _clair(row.get("telephone")),
+        "courriel": _clair(row.get("courriel")),
+    }
+    return contact if any(contact.values()) else None
+
+
+def sirens_consolides(valeur: Any) -> list[str]:
+    """SIREN du périmètre de consolidation déclaré, à neuf chiffres.
+
+    Le champ est une saisie libre : séparateurs et libellés varient d'un bilan à
+    l'autre. On n'en retient que des suites de neuf chiffres — ce qui écarte au
+    passage les SIREN tronqués par la saisie plutôt que de les compléter à tort.
+
+    ⚠️ C'est un périmètre DÉCLARÉ, pas un lien capitalistique : il dit ce que la
+    structure consolide dans SON bilan, ce qui ne recouvre ni la détention ni les
+    mandats sociaux.
+    """
+    if valeur is None:
+        return []
+    import re
+
+    vus: dict[str, None] = {}
+    for brut in re.findall(r"\d{9,}", str(valeur)):
+        if len(brut) == 9:
+            vus.setdefault(brut, None)
+    return list(vus)
+
+
+def _electricite(row: dict[str, Any]) -> Optional[dict[str, Any]]:
+    """Consommation électrique DÉDUITE du poste 2.1, jamais mesurée.
+
+    Le poste 2.1 porte les émissions de l'électricité achetée, en tCO2e ; le
+    diviser par le facteur moyen français rend un ordre de grandeur en MWh. C'est
+    la seule voie publique vers une consommation rattachée à une personne morale
+    NOMMÉE — Enedis (adresse) et RTE (IRIS) sont l'un et l'autre anonymes.
+
+    L'écart vient du facteur : un déclarant qui achète une électricité garantie
+    d'origine, ou qui applique un facteur européen, ne laisse pas la même trace.
+    D'où `certitude: "infere"` et le facteur rendu avec la valeur, pour que
+    l'appelant puisse refaire le calcul autrement.
+    """
+    p21 = row.get("emissions_publication_p21")
+    if not isinstance(p21, (int, float)) or p21 <= 0:
+        return None
+    return {
+        "mwh_estime": round(p21 / FE_ELECTRICITE_KGCO2E_KWH, 1),
+        "depuis": "poste 2.1 — électricité achetée",
+        "tco2e": p21,
+        "facteur_kgco2e_kwh": FE_ELECTRICITE_KGCO2E_KWH,
+        "certitude": "infere",
+    }
 
 
 def _emissions(row: dict[str, Any]) -> dict[str, Any]:
@@ -124,6 +210,10 @@ def _signal(row: dict[str, Any]) -> Optional[dict[str, Any]]:
         "code_departement": row.get("code_departement"),
         "tranche_salaries": salaries,
         "rapport_url": row.get("lien_url_vers_le_rapport_complet_du_beges"),
+        "objectif_2030": _clair(row.get("objectif_de_reduction_pour_2030")),
+        "contact": _contact(row),
+        "entites_consolidees": sirens_consolides(row.get("siren_des_entites_consolidees")),
+        "electricite": _electricite(row),
         "emissions": _emissions(row),
         "raw": row,
     }

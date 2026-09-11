@@ -65,3 +65,75 @@ def test_la_cle_porte_le_siren_et_lannee_de_reporting():
 def test_sans_siren_ou_sans_annee_il_ny_a_pas_de_signal():
     assert _signal({"annee_de_reporting": 2023}) is None
     assert _signal({"siren_principal": 843307646}) is None
+
+
+# --- ce que le bilan porte en plus des émissions ---------------------------
+# Ajouté le 11/09/2026 : le module ne demandait que les 22 postes et les
+# métadonnées. Le même enregistrement porte le responsable du suivi, le périmètre
+# consolidé et, dans le poste 2.1, de quoi déduire une consommation électrique.
+
+from france_opendata.beges import (  # noqa: E402
+    FE_ELECTRICITE_KGCO2E_KWH,
+    _contact,
+    _electricite,
+    sirens_consolides,
+)
+
+
+def test_un_contact_masque_a_la_source_ne_devient_pas_un_nom():
+    """L'ADEME publie le champ et y met « [Masqué] » quand le déclarant refuse la
+    diffusion. Rendre ce texte comme un nom fabriquerait un contact inexistant —
+    et un refus de diffusion ne se traite pas comme une donnée absente."""
+    assert _contact({"responsable_du_suivi": "[Masqué]", "courriel": "[Masqué]"}) is None
+    assert _contact({"responsable_du_suivi": "Non communiqué"}) is None
+    assert _contact({}) is None
+
+
+def test_un_contact_declare_sort_avec_sa_fonction():
+    """C'est la fonction qui fait la valeur du contact : « responsable énergie »
+    est un interlocuteur, un nom seul n'est qu'une ligne de plus."""
+    c = _contact({
+        "responsable_du_suivi": "Marie Dupont",
+        "fonction": "Responsable énergie",
+        "courriel": "m.dupont@exemple.fr",
+    })
+    assert c == {
+        "nom": "Marie Dupont",
+        "fonction": "Responsable énergie",
+        "telephone": None,
+        "courriel": "m.dupont@exemple.fr",
+    }
+
+
+def test_le_perimetre_consolide_ne_retient_que_des_siren_entiers():
+    """Le champ est une saisie libre. Un nombre à huit chiffres peut être un SIREN
+    amputé — mais ici, contrairement au champ numérique `siren_principal`, rien ne
+    prouve que le zéro soit tombé à la saisie : on l'écarte au lieu de l'inventer."""
+    assert sirens_consolides("552100554 ; 443061841") == ["552100554", "443061841"]
+    assert sirens_consolides("95720314") == []
+    assert sirens_consolides(None) == []
+
+
+def test_le_perimetre_consolide_dedoublonne_en_gardant_l_ordre():
+    assert sirens_consolides("552100554, 552100554 et 443061841") == [
+        "552100554",
+        "443061841",
+    ]
+
+
+def test_l_electricite_est_DEDUITE_du_poste_2_1_et_le_dit():
+    """100 tCO2e au poste 2.1, divisés par le facteur moyen français, valent
+    ~1 923 MWh. Le facteur du déclarant nous est inconnu : la valeur sort donc
+    marquée `infere`, avec le facteur employé pour que le calcul soit refaisable."""
+    e = _electricite({"emissions_publication_p21": 100.0})
+    assert e["mwh_estime"] == round(100.0 / FE_ELECTRICITE_KGCO2E_KWH, 1)
+    assert e["certitude"] == "infere"
+    assert e["facteur_kgco2e_kwh"] == FE_ELECTRICITE_KGCO2E_KWH
+    assert e["tco2e"] == 100.0, "la valeur source reste lisible à côté de la dérivée"
+
+
+def test_un_poste_2_1_absent_ne_fait_pas_une_consommation_nulle():
+    """Le piège du module entier : un poste non déclaré n'est pas un zéro."""
+    assert _electricite({}) is None
+    assert _electricite({"emissions_publication_p21": None}) is None
+    assert _electricite({"emissions_publication_p21": 0}) is None
