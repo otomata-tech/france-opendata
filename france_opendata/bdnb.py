@@ -37,6 +37,7 @@ porte le propriétaire principal et répond en quelques dizaines de milliseconde
 """
 from __future__ import annotations
 
+import math
 from typing import Any, Optional
 
 import requests
@@ -131,6 +132,11 @@ def _signal(row: dict[str, Any]) -> Optional[dict[str, Any]]:
     }
 
 
+def seuil_emprise(emprise_min: float) -> int:
+    """Seuil d'emprise au format de la colonne source : un entier, arrondi au-dessus."""
+    return math.ceil(float(emprise_min))
+
+
 class BdnbClient:
     """Bâtiments et propriétaires personnes morales. Sans clé."""
 
@@ -188,7 +194,11 @@ class BdnbClient:
         if departement:
             params["code_departement_insee"] = f"eq.{departement}"
         if emprise_min is not None:
-            params["surface_emprise_sol"] = f"gte.{emprise_min}"
+            # La colonne est ENTIÈRE : PostgREST rejette `gte.1000.0` en 400 (« invalid
+            # input syntax for type integer »). Or tout appelant typé — un corps
+            # Pydantic `Optional[float]` — envoie un flottant. Arrondi au-dessus, la
+            # sémantique tient : « ≥ 1000,5 m² » vaut « ≥ 1001 » sur des entiers.
+            params["surface_emprise_sol"] = f"gte.{seuil_emprise(emprise_min)}"
 
         borne = max(1, min(int(limit), LIMIT_MAX))
         signaux: list[dict[str, Any]] = []

@@ -6,7 +6,7 @@ L'enjeu du module tient en une phrase : c'est la seule source publique qui relie
 bâtiment à un SIREN. Tout le reste du connecteur existe pour que cette relation ne
 se lise pas plus largement qu'elle ne vaut.
 """
-from france_opendata.bdnb import LIMIT_MAX, PAGE_MAX, _autres_proprietaires, _signal
+from france_opendata.bdnb import LIMIT_MAX, PAGE_MAX, _autres_proprietaires, _signal, seuil_emprise
 
 
 def _row(**kw):
@@ -79,3 +79,13 @@ def test_le_plafond_de_l_api_est_dit_par_une_constante():
     de la source, pas un réglage — d'où la pagination interne."""
     assert PAGE_MAX == 10
     assert LIMIT_MAX >= PAGE_MAX
+
+
+def test_le_seuil_d_emprise_part_en_entier():
+    """Mesuré en production le 11/09/2026 : la route répondait 400 dès qu'on filtrait
+    par emprise. La colonne est entière, PostgREST refuse `gte.1000.0` — et le
+    service, typé en `float`, n'envoie jamais autre chose. Depuis un poste, un
+    appel en `int` passait : le défaut ne se voyait qu'une fois déployé."""
+    assert seuil_emprise(1000.0) == 1000
+    assert seuil_emprise(1000) == 1000
+    assert seuil_emprise(1000.5) == 1001, "arrondi au-dessus : la sémantique de ≥ tient"
