@@ -36,6 +36,8 @@ from __future__ import annotations
 
 import csv
 import io
+import re
+import unicodedata
 import zipfile
 from typing import Any, Optional
 
@@ -79,6 +81,27 @@ def quantite_declaree(brut: Any) -> tuple[Optional[float], bool]:
         return None, False
 
 
+def libelle_inconnu(champ: str, valeur: str, connus: set[str], annee: int) -> str:
+    """Le message d'un libellé absent du millésime, avec les libellés qui s'en approchent.
+
+    Filtré en silence, un libellé approximatif (« CO2 Total ») rendrait une liste
+    vide — indiscernable de « aucun émetteur ». Il est refusé, et le refus dit quoi
+    écrire à la place. Un mot rare pèse plus qu'un mot courant : dans « CO2 Total »,
+    « CO2 » désigne trois libellés, « total » une vingtaine.
+    """
+    def plier(s: str) -> str:  # « methane » doit trouver « Méthane (CH4) »
+        return unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode().lower()
+
+    bas = {c: plier(c) for c in connus}
+    mots = {m for m in re.findall(r"\w+", plier(valeur)) if len(m) > 1}
+    poids = {m: 1 / n for m in mots if (n := sum(m in b for b in bas.values()))}
+    notes = sorted(((sum(p for m, p in poids.items() if m in bas[c]), c) for c in connus),
+                   key=lambda x: (-x[0], len(x[1])))
+    proches = [c for n, c in notes[:3] if n > 0]
+    msg = f"{champ} inconnu du registre {annee} : {valeur!r} — libellé exact attendu"
+    return msg + (f" ; proches : {' | '.join(proches)}" if proches else "")
+
+
 def _etablissement(row: dict[str, str]) -> dict[str, Any]:
     return {
         "identifiant": _texte(row.get("identifiant")),
@@ -106,13 +129,13 @@ class IrepClient:
     def __init__(self, timeout: Any = DEFAULT_TIMEOUT):
         self.timeout = timeout
         self.session = requests.Session()
-        self._cache: dict[int, tuple[dict[str, dict], list[dict]]] = {}
+        self._cache: dict[int, tuple[dict[str, dict], list[dict], dict[str, set[str]]]] = {}
 
     def _lire_csv(self, z: zipfile.ZipFile, nom: str) -> list[dict[str, str]]:
         with z.open(nom) as f:
             return list(csv.DictReader(io.TextIOWrapper(f, encoding=ENCODAGE), delimiter=";"))
 
-    def _charger(self, annee: int) -> tuple[dict[str, dict], list[dict]]:
+    def _charger(self, annee: int) -> tuple[dict[str, dict], list[dict], dict[str, set[str]]]:
         if annee in self._cache:
             return self._cache[annee]
         resp = self.session.get(
@@ -128,7 +151,9 @@ class IrepClient:
             if e["identifiant"]
         }
         emissions = self._lire_csv(z, f"{annee}/emissions.csv")
-        self._cache[annee] = (etabs, emissions)
+        libelles = {champ: {t for r in emissions if (t := _texte(r.get(champ)))}
+                    for champ in ("polluant", "milieu")}
+        self._cache[annee] = (etabs, emissions, libelles)
         return self._cache[annee]
 
     def emetteurs(
@@ -153,12 +178,19 @@ class IrepClient:
             milieu: « Air » par défaut ; `None` prend aussi l'eau et le sol.
             limit: établissements rendus.
 
+        Raises:
+            ValueError: `polluant` ou `milieu` absent du millésime — le message
+                propose les libellés proches.
+
         Returns:
             `{"annee", "total", "tronque", "sous_seuil", "signaux": [...]}`.
             `sous_seuil` compte les déclarations retenues dont la quantité est sous
             le seuil : elles sont RENDUES, en fin de liste, avec `quantite: None`.
         """
-        etabs, emissions = self._charger(annee)
+        etabs, emissions, libelles = self._charger(annee)
+        for champ, valeur in (("polluant", polluant), ("milieu", milieu)):
+            if valeur and valeur not in libelles[champ]:
+                raise ValueError(libelle_inconnu(champ, valeur, libelles[champ], annee))
         dep = (departement or "").strip()
         retenues = []
         for row in emissions:

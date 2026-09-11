@@ -6,7 +6,11 @@ Le fait qui commande tout le module : sur le millésime 2024, **56 848 lignes su
 64 045 portent la chaîne « < seuil »** au lieu d'un nombre. Un `float()` y plante,
 et y substituer 0 invente une mesure sur 89 % du registre.
 """
-from france_opendata.irep import CO2_FOSSILE, CO2_TOTAL, _etablissement, quantite_declaree
+import pytest
+
+from france_opendata.irep import (
+    CO2_FOSSILE, CO2_TOTAL, IrepClient, _etablissement, libelle_inconnu, quantite_declaree,
+)
 
 
 def test_sous_le_seuil_nest_pas_zero_et_se_dit():
@@ -50,3 +54,39 @@ def test_les_deux_libelles_de_co2_sont_distincts():
     d'un site qui brûle du bois."""
     assert CO2_FOSSILE != CO2_TOTAL
     assert "non biomasse" in CO2_FOSSILE
+
+
+def _client_hors_ligne() -> IrepClient:
+    c = IrepClient()
+    emissions = [{"identifiant": "x", "polluant": CO2_FOSSILE, "milieu": "Air",
+                  "code_departement": "59", "quantite": "5995000000"}]
+    polluants = {CO2_FOSSILE, CO2_TOTAL, "Azote total", "Phosphore total", "Carbone organique total (COT)"}
+    c._cache[2024] = ({}, emissions, {"polluant": polluants, "milieu": {"Air", "Sol"}})
+    return c
+
+
+def test_un_libelle_approximatif_est_refuse_pas_filtre_en_silence():
+    """Mesuré en production le 11/09/2026 : `polluant="CO2 Total"` rendait une liste
+    vide, indiscernable de « aucun émetteur dans le Nord » — Dunkerque en compte deux
+    parmi les plus gros de France."""
+    with pytest.raises(ValueError, match="polluant inconnu") as e:
+        _client_hors_ligne().emetteurs(departement="59", polluant="CO2 Total")
+    proches = str(e.value).split("proches : ")[1].split(" | ")
+    assert proches[:2] == [CO2_TOTAL, CO2_FOSSILE], \
+        "« CO2 » est rare, « total » courant : l'azote et le phosphore totaux passent après"
+    with pytest.raises(ValueError, match="milieu inconnu.*Air"):
+        _client_hors_ligne().emetteurs(departement="59", milieu="air")
+
+
+def test_un_libelle_exact_passe():
+    r = _client_hors_ligne().emetteurs(departement="59")
+    assert r["total"] == 1 and r["signaux"][0]["quantite"] == 5995000000.0
+
+
+def test_un_libelle_sans_accent_trouve_le_libelle_accentue():
+    msg = libelle_inconnu("polluant", "methane", {"Méthane (CH4)", CO2_FOSSILE}, 2024)
+    assert msg.endswith("proches : Méthane (CH4)")
+
+
+def test_un_libelle_sans_rien_d_approchant_le_dit():
+    assert libelle_inconnu("polluant", "zz", {CO2_FOSSILE}, 2024).endswith("libellé exact attendu")
