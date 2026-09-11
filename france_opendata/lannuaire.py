@@ -16,9 +16,8 @@ sortent comme du texte que personne ne sait exploiter. Ils sont décodés ici, e
 valeur qui ne se décode pas reste signalée plutôt que devinée.
 
 ⚠️ **Le portail est servi par OpenDataSoft**, sur son propre domaine. Les domaines
-`*.opendatasoft.com` bloquent les IP de datacenter ; celui-ci répondait depuis un poste
-le 11/09/2026, mais **l'egress depuis la box de production reste à vérifier** avant de
-compter dessus.
+`*.opendatasoft.com` bloquent les IP de datacenter ; celui-ci répond depuis la box de
+production (vérifié le 11/09/2026). S'il se met à refuser, c'est la première piste.
 """
 from __future__ import annotations
 
@@ -60,7 +59,11 @@ def _valeurs(liste: Any) -> list[str]:
 
 
 def _responsables(liste: Any) -> list[dict[str, Any]]:
-    """Les personnes affectées au service, avec leur fonction."""
+    """Les personnes affectées au service, avec leur fonction.
+
+    Le courriel d'une personne a la forme du téléphone — une liste de
+    `{libelle, valeur}` — alors que celui du service est une chaîne.
+    """
     if not isinstance(liste, list):
         return []
     out = []
@@ -74,7 +77,7 @@ def _responsables(liste: Any) -> list[dict[str, Any]]:
             "nom": p.get("nom"),
             "fonction": a.get("fonction"),
             "grade": p.get("grade"),
-            "courriel": p.get("adresse_courriel"),
+            "courriel": _valeurs(p.get("adresse_courriel")),
             "telephone": _valeurs(a.get("telephone")),
         })
     return out

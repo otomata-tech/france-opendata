@@ -47,11 +47,18 @@ def test_un_json_corrompu_est_signale_pas_avale():
 
 
 def test_le_responsable_sort_avec_sa_fonction_et_son_courriel():
-    r = _responsables([{"personne": {"nom": "DURAND", "prenom": "Alex",
-                                     "adresse_courriel": "direction@service.example"},
-                        "fonction": "Directrice départementale"}])
+    """Le courriel d'une personne arrive comme le téléphone : une liste de
+    `{libelle, valeur}` (mesuré le 11/09/2026 sur Lille : 35 listes vides, 2 remplies,
+    aucune chaîne). Lu tel quel, il sortait en objets bruts."""
+    r = _responsables([
+        {"personne": {"nom": "DURAND", "prenom": "Alex",
+                      "adresse_courriel": [{"libelle": "", "valeur": "direction@service.example"}]},
+         "fonction": "Directrice départementale"},
+        {"personne": {"nom": "MARTIN", "adresse_courriel": []}, "fonction": "Adjoint"},
+    ])
     assert r[0]["fonction"] == "Directrice départementale"
-    assert r[0]["courriel"] == "direction@service.example"
+    assert r[0]["courriel"] == ["direction@service.example"]
+    assert r[1]["courriel"] == []
 
 
 # --- DECP ---------------------------------------------------------------------
