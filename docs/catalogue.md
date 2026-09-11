@@ -19,6 +19,8 @@ donne + clé + exposition oto + statut. Le détail par client vit dans son modul
 | `BodaccClient` | BODACC | créations, ventes, procédures collectives | — |
 | `BoampClient` | BOAMP (dump DILA → parquet DuckDB) | avis de marchés publics | — · extra `[stock]` (OpenDataSoft bloquait les IP datacenter → lecture du dump DILA, issue #3 résolue) |
 
+| `DecpClient` | DECP — data.economie.gouv.fr | marchés publics **attribués** : titulaire (SIRET), montant, notification, durée — l'issue, là où BOAMP ne donne que l'avis. ⚠️ SIRET stocké en nombre ; pas de dénomination pour le titulaire principal | SIRET | `fr_tenders_awarded` |
+
 ## 2. Immobilier, foncier, cadastre — namespace oto `foncier_*`
 
 | Client | Source | Donne | Clé |
@@ -30,6 +32,8 @@ donne + clé + exposition oto + statut. Le détail par client vit dans son modul
 | `ApiCartoClient` | IGN API Carto | parcelle cadastrale (point/géométrie) | — |
 | `BdTopoClient` | IGN BDTOPO V3 (WFS) | bâti d'une parcelle : emprise au sol, CES réel, hauteurs | — |
 | `SitadelClient` | Sit@del SDES/DiDo | permis de construire/aménager (fichiers nationaux à pré-fetcher) | — |
+
+| `BdnbClient` | BDNB — CSTB, `api.bdnb.io` | **le bâtiment et le SIREN de son propriétaire personne morale** — la seule relation lieu → entreprise sans rapprochement d'adresse ; plus emprise, usage, DPE, consos pro élec/gaz (kWh). ⚠️ personnes physiques absentes (anonymisées DGFiP, ~41 %) ; 10 lignes max par requête | SIREN / INSEE | `foncier_proprietaire` |
 
 ## 3. Urbanisme & zonage — namespace oto `urba_*`
 
@@ -44,6 +48,7 @@ donne + clé + exposition oto + statut. Le détail par client vit dans son modul
 | Client | Source | Donne | Clé | oto |
 |---|---|---|---|---|
 | `GeorisquesClient` | Géorisques | ICPE (régime, IED, Seveso, DREAL) + risques naturels (GASPAR) + aléa argiles (RGA) | — | `foncier_icpe`, `urba_risques`/`urba_argiles` |
+| `IrepClient` | Géorisques — registre IREP (ZIP annuel) | émissions déclarées **par établissement**, avec SIRET et coordonnées — le CO2 du SITE, là où BEGES ne donne que l'organisation entière. ⚠️ 89 % des quantités valent « < seuil » | SIRET | `foncier_emissions` |
 
 ## 5. Énergie — namespace oto `foncier_*`
 
@@ -59,6 +64,9 @@ donne + clé + exposition oto + statut. Le détail par client vit dans son modul
 | Client | Source | Donne | Clé |
 |---|---|---|---|
 | `InseeMelodiClient` | INSEE Mélodi | données locales par commune (population, familles, revenus, logement) | — |
+
+| `ElusClient` | Répertoire National des Élus (Min. Intérieur) | maires par commune, présidents d'EPCI, avec la date de prise de fonction — **sans** date de naissance ni sexe, écartés à la lecture | INSEE / SIREN EPCI | `urba_elus` |
+| `LannuaireClient` | Annuaire de l'administration (DILA) | services publics : standard, courriel, site, et le **responsable nommé** avec sa fonction | SIREN / INSEE | `urba_annuaire` |
 
 ## 7. Culture — namespace oto `culture_*`
 
@@ -93,14 +101,9 @@ Repérés via le MCP data.gouv.fr (2026-06-24), par ordre d'intérêt :
 
 | Candidat | Source | Pourquoi | Accès |
 |---|---|---|---|
-| **DECP** | Données Essentielles de la Commande Publique | complément/alternative à BOAMP (commande publique structurée) | data.gouv / API |
 | **RNA** | Répertoire National des Associations (Min. Intérieur) | élargit l'univers entités au-delà des entreprises (~1,5 M assos loi 1901, + ARUP) | dump national / agrégé |
 | **BANCO** | Base Nationale des Commerces Ouverte | commerces géolocalisés (OSM) → prospection locale | dump |
 | Base Carbone | ADEME DataFair (`base-carboner`, 18 616 lignes) | facteurs d'émission GES | API REST |
-| **BDNB** | CSTB — `api.bdnb.io` **répond** (vérifié 09/09/2026) | **le seul lien bâtiment → propriétaire personne morale avec SIREN** (tables `proprietaire` + `rel_batiment_groupe_proprietaire`, propriétaire principal = tri `nb_locaux_open` desc puis dédoublonnage) — aujourd'hui rien dans la lib ne relie un lieu à son propriétaire. Plus bâti, DPE, rénovation. Se joint au DPE tertiaire par `id_rnb`, jointure EXACTE et non spatiale. ⚠️ couverture **59 %** des grands bâtiments pros : les personnes physiques sont anonymisées à la source par la DGFiP (MAJIC) — à MARQUER, pas à taire | API REST |
-| **IREP** | Registre des émissions polluantes — `files.georisques.fr/irep/<annee>.zip` | CO2 **par établissement**, avec SIRET et coordonnées : désigne *quel* site d'un grand compte, là où BEGES ne donne que la structure entière | ZIP annuel (`files.georisques.fr`, OK datacenter) |
-| **Annuaire de l'administration** | DILA — `api-lannuaire.service-public.fr` | contacts d'administrations par SIREN **avec responsable nommé et sa fonction** ; sur cible publique, remplace un enrichissement payant | ODS ⚠️ tester l'egress |
-| **Répertoire national des élus** | Min. Intérieur, data.gouv | maires par code INSEE, présidents d'EPCI — le décideur d'une commune | CSV |
 | **Cartofriches** | Cerema | friches avec propriétaire publié, surface, pollution, statut — foncier dégradé, prioritaire aux AO | data.gouv CSV |
 | **Registre RTE des installations de production** | ODRÉ `registre-national-installation-production-stockage-electricite-agrege` | parc électrique **nominatif** > 36 kW : énergie injectée sur 12 mois glissants, poste source, date de mise en service → « déjà équipé », détection de sous-performance, fins d'obligation d'achat 2026-2031 | ODS ⚠️ même portail qu'`odre.py`, donc même risque d'egress |
 | EU ETS / EUTL | registre européen des quotas | industrie lourde sous quotas, avec exploitant et adresse | **source machine non localisée** au 09/09/2026 — l'endpoint EEA testé rend un 404 |

@@ -11,7 +11,12 @@
 - SireneClient      : INSEE Sirene (SIRET, siège) — clé via env SIRENE_API_KEY
 - GeorisquesClient  : Géorisques — ICPE (régime, IED, Seveso, DREAL) + risques naturels d'une commune (GASPAR) + aléa argiles (RGA) — sans clé
 - EnedisClient      : Enedis conso élec annuelle par adresse (signaux MWh) — sans clé
+- BdnbClient        : bâtiments et le SIREN de leur propriétaire personne morale (CSTB)
 - BegesClient       : bilans GES déclarés (ADEME) — joignables par SIREN, pas par adresse
+- IrepClient        : émissions déclarées par ÉTABLISSEMENT, avec SIRET (Géorisques)
+- ElusClient        : maires et présidents d'EPCI (Répertoire National des Élus)
+- LannuaireClient   : services publics et leurs responsables nommés (DILA)
+- DecpClient        : marchés publics ATTRIBUÉS — titulaire, montant, notification
 - DpeTertiaireClient: DPE des bâtiments NON résidentiels (ADEME) — secteur ERP, surface,
                       étiquette, coordonnées déjà en Lambert 93
 - OdreClient        : ODRÉ conso élec des sites raccordés au réseau de TRANSPORT (RTE)
@@ -53,7 +58,12 @@ from .bdtopo import BdTopoClient
 from .sitadel import SitadelClient
 from .georisques import GeorisquesClient
 from .enedis import EnedisClient
+from .bdnb import BdnbClient
 from .beges import BegesClient
+from .irep import IrepClient
+from .elus import ElusClient
+from .lannuaire import LannuaireClient
+from .decp import DecpClient
 from .dpe_tertiaire import DpeTertiaireClient
 from .odre import OdreClient
 from . import resolution  # noqa: F401  (rapprochement site → établissement)
@@ -79,7 +89,7 @@ from .aides import AidesClient
 
 __all__ = ["EntreprisesClient", "SireneClient", "InpiClient", "BodaccClient", "BoampClient", "DvfClient", "DpeClient",
            "BdTopoClient", "SitadelClient", "GeorisquesClient",
-           "EnedisClient", "OdreClient", "BegesClient", "DpeTertiaireClient", "BanClient", "ApiCartoClient", "PvgisClient",
+           "EnedisClient", "OdreClient", "BdnbClient", "BegesClient", "IrepClient", "ElusClient", "LannuaireClient", "DecpClient", "DpeTertiaireClient", "BanClient", "ApiCartoClient", "PvgisClient",
            "IgnClient", "OverpassClient", "GpuClient", "QpvClient", "InseeMelodiClient", "InseeIrisClient", "EpfifClient",
            "OpendatasoftClient", "SpectacleClient", "FinessClient", "HasEssmsClient",
            "EgaproClient", "FrenchTechClient", "AidesClient"]
