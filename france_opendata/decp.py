@@ -81,13 +81,19 @@ def clause_titulaire(siret: str, principal_en_nombre: bool) -> str:
     return f'({rang1} or titulaire_id_2 = "{s}" or titulaire_id_3 = "{s}")'
 
 
+# Le jeu 2022 remplit les rangs sans co-titulaire par « CDL », en identifiant ET en
+# type (648 963 rangs 2 sur 702 092, le 11/09/2026) — là où le jeu 2019 laisse vide.
+# Ce n'est pas une donnée : rendu tel quel, il ferait un co-traitant fantôme.
+_SANS_TITULAIRE = "CDL"
+
+
 def _titulaires(row: dict[str, Any]) -> list[dict[str, Any]]:
     out = []
     for i in (1, 2, 3):
         ident = row.get(f"titulaire_id_{i}")
-        if ident in (None, ""):
-            continue
         type_id = row.get(f"titulaire_typeidentifiant_{i}")
+        if ident in (None, "") or (ident == _SANS_TITULAIRE and type_id == _SANS_TITULAIRE):
+            continue
         out.append({
             "rang": i,
             "identifiant": normaliser_identifiant(ident, type_id),

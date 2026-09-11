@@ -8,7 +8,7 @@ marché récent ; les marchés notifiés depuis 2024 sont dans `decp-2022-marche
 """
 import pytest
 
-from france_opendata.decp import BASCULE, DecpClient, clause_titulaire
+from france_opendata.decp import BASCULE, DecpClient, _titulaires, clause_titulaire
 
 
 class _Reponse:
@@ -94,6 +94,15 @@ def test_le_titulaire_est_cherche_a_tous_les_rangs_et_au_bon_type():
         ' or titulaire_id_3 = "05780122700059")')
     assert clause_titulaire("05780122700059", principal_en_nombre=False).startswith(
         '(titulaire_id_1 = "05780122700059" or')
+
+
+def test_le_bouche_trou_cdl_n_est_pas_un_co_titulaire():
+    """Vu en production le 11/09/2026 : chaque marché récent sortait avec deux
+    co-titulaires `{"identifiant": "CDL", "type_identifiant": "CDL"}`."""
+    t = _titulaires({"titulaire_id_1": "88504823100017", "titulaire_typeidentifiant_1": "SIRET",
+                     "titulaire_id_2": "CDL", "titulaire_typeidentifiant_2": "CDL",
+                     "titulaire_id_3": "CDL", "titulaire_typeidentifiant_3": "CDL"})
+    assert [x["identifiant"] for x in t] == ["88504823100017"]
 
 
 def test_le_siret_du_titulaire_sort_a_quatorze_chiffres_dans_les_deux_regimes():
