@@ -11,20 +11,6 @@ SIRENE/BOAMP, parseurs XML DILA durcis), `[sante]` (DuckDB). Sans extra, seuls l
 clients HTTP sont disponibles — les imports lourds sont **lazy**, à l'intérieur des
 fonctions, pour que ça reste vrai.
 
-## Architecture
-
-```
-france_opendata/
-  <client>.py          # un fichier par source (entreprises, inpi, bodacc, dvf, dpe…)
-  *_ingest.py          # crawlers des dumps DILA (acco, kali, legi, juri, boamp)
-  sirene_stock.py      # requêtes DuckDB sur le parquet partitionné
-  ── honnêteté de la donnée ──
-  alertes.py           # le vocabulaire FERMÉ des alertes + la certitude de chaque code
-  finances.py          # bloc `finances` de Recherche Entreprises (le 0 code l'absence)
-  liasse.py            # liasse INPI (la sentinelle INT32 dit deux choses)
-  dila.py              # licence, paternité et provenance communes aux fonds DILA
-```
-
 ## Commands
 
 ```bash
@@ -43,6 +29,8 @@ Builder depuis `git archive HEAD` : sinon le WIP non commité part dans le paque
 - **Une valeur qu'on ne peut pas servir se MARQUE, elle ne se corrige ni ne se tait.**
   Convertir un montant dont on ignore l'unité serait indétectable en aval — pire que
   l'absence. Les annotateurs retirent ce qui n'est pas une donnée et signalent le reste.
+  Exemple : le bloc `finances` de Recherche Entreprises (`finances.py`) code l'absence
+  par `0` — un montant à zéro n'est pas un fait, c'est un trou de données.
 - **Chaque code d'alerte porte sa certitude** (`alertes.ALERTES`) : `prouve` = lu dans la
   donnée, `infere` = déduit, et le NOM le dit (`saturation_probable`). Surestimer sa
   confiance serait le mensonge qu'on corrige, un cran plus haut — **et le sous-estimer
@@ -62,7 +50,7 @@ Builder depuis `git archive HEAD` : sinon le WIP non commité part dans le paque
 - **Le parquet des bilans INPI est un dataset EXTERNE** (Signaux Faibles, via data.gouv),
   stocké en **INT32** : tout montant > 2 147 483 647 sature et se lit comme *absent*
   (5,2 % des dépôts consolidés ; la liasse est amputée de ses plus gros postes, donc tout
-  ratio calculé dessus est faux sans le dire — `#10`). On ne le rebuilde pas : la valeur
+  ratio calculé dessus est faux sans le dire). On ne le rebuilde pas : la valeur
   est détruite en amont, seul le **fait** du débordement est détectable.
 - **Bumper la version à chaque publication** : PyPI refuse de réécrire une version.
 - Un `publish` PyPI **n'atteint pas** les installations editable d'une machine — et la
