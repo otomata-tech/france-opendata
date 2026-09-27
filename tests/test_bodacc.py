@@ -18,7 +18,8 @@ import re
 import pytest
 
 from france_opendata import bodacc as mod
-from france_opendata.bodacc import FAMILLES, BodaccClient, _famille_ods, _sirens_of
+from france_opendata.bodacc import (FAMILLES, BodaccClient, _clauses_dates, _famille_ods,
+                                    _sirens_of)
 
 CEDANT, ACQUEREUR, TIERS = "111111111", "222222222", "333333333"
 
@@ -224,9 +225,13 @@ class _FauxOds:
         where = params["where"]
         demandes = set(re.findall(r'registre="(\d{9})"', where))
         fam = re.search(r'familleavis="([^"]+)"', where)
+        apres = re.search(r'dateparution>="([^"]+)"', where)
+        avant = re.search(r'dateparution<="([^"]+)"', where)
         hits = [r for r in self.records
                 if demandes & set(r.get("registre") or [])
-                and (not fam or r["familleavis"] == fam.group(1))]
+                and (not fam or r["familleavis"] == fam.group(1))
+                and (not apres or r["dateparution"] >= apres.group(1))
+                and (not avant or r["dateparution"] <= avant.group(1))]
         off, lim = int(params.get("offset", 0)), int(params["limit"])
 
         class _R:
@@ -272,7 +277,7 @@ def test_lot_annonce_vue_par_deux_paquets_comptee_une_fois(monkeypatch):
 def test_lot_annonce_sans_siren_demande_ecartee_et_comptee(monkeypatch):
     # Un amont qui rendrait une annonce dont le registre ne nomme aucun SIREN demandé.
     rec = modification("M9", TIERS)
-    monkeypatch.setattr(mod.BodaccClient, "_fetch_chunk", lambda self, sirens, famille: [rec])
+    monkeypatch.setattr(mod.BodaccClient, "_fetch_chunk", lambda self, sirens, filtres: [rec])
     out = BodaccClient().search_batch([CEDANT])
     assert out["annonces"] == []
     assert out["synthese"]["annonces_sans_siren_demande"] == 1
@@ -284,3 +289,46 @@ def test_synthese_jamais_negative():
     s = BodaccClient._synthese([CEDANT, ACQUEREUR], lignes)
     assert s["sirens_avec_annonce"] == 1
     assert s["sirens_sans_annonce"] == 1
+
+
+# --- fenêtre de parution -----------------------------------------------------
+
+def test_clauses_dates_partagees_par_search_et_le_lot():
+    assert _clauses_dates(None, None) == []
+    assert _clauses_dates("2026-01-01", None) == ['dateparution>="2026-01-01"']
+    assert _clauses_dates(None, "2026-06-30") == ['dateparution<="2026-06-30"']
+    assert _clauses_dates("2026-01-01", "2026-01-01") == [
+        'dateparution>="2026-01-01"', 'dateparution<="2026-01-01"']
+
+
+@pytest.mark.parametrize("date_from,date_to,motif", [
+    ("01/01/2026", None, "date_from invalide"),
+    (None, "2026-1-5", "date_to invalide"),
+    ("2026-02-30", None, "date_from invalide"),
+    ("2026-W01-1", None, "date_from invalide"),
+    ("2026-06-30", "2026-01-01", "fenêtre vide"),
+])
+def test_date_mal_formee_ou_fenetre_vide_refusee_avant_tout_appel(monkeypatch, date_from,
+                                                                  date_to, motif):
+    def interdit(*a, **k):
+        raise AssertionError("aucun appel amont attendu")
+    monkeypatch.setattr(mod.requests, "get", interdit)
+    for appel in (lambda: BodaccClient().search_batch([CEDANT], date_from=date_from, date_to=date_to),
+                  lambda: BodaccClient().search(date_from=date_from, date_to=date_to)):
+        with pytest.raises(ValueError, match=motif):
+            appel()
+
+
+def test_lot_filtre_par_date_de_parution(monkeypatch):
+    anciennes = modification("M0", CEDANT)
+    anciennes["dateparution"] = "2019-03-01"
+    recente = modification("M1", CEDANT)  # 2026-08-01
+    faux = _FauxOds([anciennes, recente])
+    monkeypatch.setattr(mod.requests, "get", faux)
+    out = BodaccClient().search_batch([CEDANT], famille="modification",
+                                      date_from="2026-01-01", date_to="2026-12-31")
+    assert [a["bodacc_id"] for a in out["annonces"]] == ["M1"]
+    assert out["synthese"]["periode"] == {"date_from": "2026-01-01", "date_to": "2026-12-31"}
+    out = BodaccClient().search_batch([CEDANT])
+    assert out["synthese"]["annonces_total"] == 2
+    assert out["synthese"]["periode"] == {"date_from": None, "date_to": None}

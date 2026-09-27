@@ -5,6 +5,7 @@ No auth required. Licence Ouverte / Etalab 2.0.
 """
 from __future__ import annotations
 
+import re
 from collections import Counter
 from typing import Any, Optional
 
@@ -69,6 +70,36 @@ def _famille_ods(famille: Optional[str]) -> Optional[str]:
             "(`modification`)."
         )
     return canon
+
+
+def _clauses_dates(date_from: Optional[str], date_to: Optional[str]) -> list[str]:
+    """Les clauses ODS de la fenêtre de parution (bornes incluses).
+
+    Raises:
+        ValueError: date hors `AAAA-MM-JJ`, ou fenêtre vide (`date_from` > `date_to`)
+            — l'amont rendrait une erreur brute ou zéro annonce.
+    """
+    from datetime import date
+
+    bornes: dict[str, Optional[date]] = {}
+    for nom, val in (("date_from", date_from), ("date_to", date_to)):
+        if not val:
+            bornes[nom] = None
+            continue
+        try:
+            if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", val):
+                raise ValueError
+            bornes[nom] = date.fromisoformat(val)
+        except ValueError:
+            raise ValueError(f"{nom} invalide : {val!r} — format attendu AAAA-MM-JJ.") from None
+    if bornes["date_from"] and bornes["date_to"] and bornes["date_from"] > bornes["date_to"]:
+        raise ValueError(f"fenêtre vide : date_from {date_from} est après date_to {date_to}.")
+    clauses = []
+    if bornes["date_from"]:
+        clauses.append(f'dateparution>="{date_from}"')
+    if bornes["date_to"]:
+        clauses.append(f'dateparution<="{date_to}"')
+    return clauses
 
 
 def _siren(numero: Any) -> Optional[str]:
@@ -190,6 +221,8 @@ class BodaccClient:
         sirens: list[str],
         famille: Optional[str] = None,
         chunk_size: Optional[int] = None,
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
     ) -> dict[str, Any]:
         """Lookup BODACC announcements for MANY SIRENs in few ODS requests.
 
@@ -210,6 +243,8 @@ class BodaccClient:
             famille: filtre `familleavis` optionnel (voir `FAMILLES`) — ex.
                 "collective" pour ne remonter que les procédures collectives.
             chunk_size: nombre de SIREN par requête OR (défaut 40).
+            date_from: date de parution minimale, incluse (AAAA-MM-JJ).
+            date_to: date de parution maximale, incluse (AAAA-MM-JJ).
 
         Returns:
             {
@@ -221,24 +256,26 @@ class BodaccClient:
                            sirens_sans_annonce, annonces_total, lignes_total,
                            annonces_sans_texte, annonces_sans_siren_demande,
                            par_partie, par_famille, par_type_avis,
-                           par_jugement_nature, par_jugement_famille},
+                           par_jugement_nature, par_jugement_famille,
+                           periode},
             }
 
         Raises:
-            ValueError: `famille` inconnue.
+            ValueError: `famille` inconnue, date mal formée ou fenêtre vide.
         """
         norm = [s for s in (str(x).replace(" ", "") for x in sirens) if s]
         seen: set[str] = set()
         uniq = [s for s in norm if not (s in seen or seen.add(s))]
 
         famille = _famille_ods(famille)
+        filtres = ([f'familleavis="{famille}"'] if famille else []) + _clauses_dates(date_from, date_to)
         step = chunk_size or self._BATCH_CHUNK
 
         # Une annonce qui nomme deux SIREN demandés de deux paquets différents
         # revient deux fois : dédoublonnée par son id, sinon comptée double.
         raw: dict[Any, dict] = {}
         for i in range(0, len(uniq), step):
-            for rec in self._fetch_chunk(uniq[i:i + step], famille):
+            for rec in self._fetch_chunk(uniq[i:i + step], filtres):
                 raw.setdefault(rec.get("id") or id(rec), rec)
 
         demandes = set(uniq)
@@ -253,15 +290,17 @@ class BodaccClient:
 
         return {
             "annonces": lignes,
-            "synthese": self._synthese(uniq, lignes, sans_siren_demande),
+            "synthese": {
+                **self._synthese(uniq, lignes, sans_siren_demande),
+                # La fenêtre appliquée : un compte se lit contre elle.
+                "periode": {"date_from": date_from, "date_to": date_to},
+            },
         }
 
-    def _fetch_chunk(self, sirens: list[str], famille: Optional[str]) -> list[dict]:
+    def _fetch_chunk(self, sirens: list[str], filtres: list[str]) -> list[dict]:
         """Une plage de SIREN, paginée jusqu'à épuisement (total_count > 100)."""
         or_clause = " OR ".join(f'registre="{s}"' for s in sirens)
-        where = f"({or_clause})"
-        if famille:
-            where += f' AND familleavis="{famille}"'
+        where = " AND ".join([f"({or_clause})", *filtres])
 
         out: list[dict] = []
         offset = 0
@@ -292,7 +331,11 @@ class BodaccClient:
         date_to: Optional[str] = None,
         limit: int = 20,
     ) -> dict[str, Any]:
-        """Search BODACC announcements by keyword / filters."""
+        """Search BODACC announcements by keyword / filters.
+
+        Raises:
+            ValueError: `famille` inconnue, date mal formée ou fenêtre vide.
+        """
         clauses: list[str] = []
         if query:
             clauses.append(f'search(commercant, "{query}")')
@@ -301,10 +344,7 @@ class BodaccClient:
         famille = _famille_ods(famille)
         if famille:
             clauses.append(f'familleavis="{famille}"')
-        if date_from:
-            clauses.append(f'dateparution>="{date_from}"')
-        if date_to:
-            clauses.append(f'dateparution<="{date_to}"')
+        clauses += _clauses_dates(date_from, date_to)
 
         params: dict[str, str] = {
             "order_by": "dateparution desc",
