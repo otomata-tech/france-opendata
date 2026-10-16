@@ -30,6 +30,8 @@ import unicodedata
 from datetime import datetime, timedelta
 from typing import Any, Optional
 
+from .erreurs import ParametreInvalide
+
 URL = "https://gels-avoirs.dgtresor.gouv.fr/ApiPublic/api/v1/publication/derniere-publication-fichier-json"
 PAGE = "https://gels-avoirs.dgtresor.gouv.fr/"
 PRODUCTEUR = "Direction générale du Trésor"
@@ -134,10 +136,10 @@ def correspondances(lignes: list[dict], nom: str, prenom: Optional[str] = None) 
     if not mots:
         # Un nom fait de seule ponctuation ne chercherait rien — et rapprocherait tous
         # les alias non latins, réduits à rien eux aussi.
-        raise ValueError("nom : au moins une lettre ou un chiffre")
+        raise ParametreInvalide("nom", "au moins une lettre ou un chiffre")
     prenom_n = normaliser(prenom) if prenom is not None else None
     if prenom is not None and not prenom_n:
-        raise ValueError("prenom : au moins une lettre ou un chiffre")
+        raise ParametreInvalide("prenom", "au moins une lettre ou un chiffre")
     out = []
     for ligne in lignes:
         noms = [normaliser(n).split() for n in [ligne["nom"], *ligne["alias"]]]

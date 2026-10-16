@@ -40,6 +40,8 @@ from typing import Any, Iterator, Optional
 
 import requests
 
+from .erreurs import ParametreInvalide
+
 DIDO_BASE = "https://data.statistiques.developpement-durable.gouv.fr/dido/api/v1/datafiles"
 
 # Les 4 datafiles du dataset (RID fixes, contenu = dernier millésime publié).
@@ -287,9 +289,9 @@ class SitadelClient:
             `{"total": int, "page": int, "page_size": int, "permis": [normalisés]}`.
         """
         if kind not in _PARSERS:
-            raise ValueError(f"kind inconnu {kind!r} — attendu {KINDS}")
+            raise ParametreInvalide("kind", f"inconnu {kind!r}, attendu {KINDS}")
         if page_size not in DIDO_PAGE_SIZES:
-            raise ValueError(f"page_size doit être dans {DIDO_PAGE_SIZES}, reçu {page_size}")
+            raise ParametreInvalide("page_size", f"une valeur parmi {DIDO_PAGE_SIZES}, reçu {page_size}")
         parse = _PARSERS[kind]
         params: dict[str, Any] = {"page": page, "pageSize": page_size}
         for field, spec in (filters or {}).items():
@@ -341,7 +343,7 @@ class SitadelClient:
             la clé `parcelles` des permis normalisés.
         """
         if kind not in RID_BY_KIND:
-            raise ValueError(f"kind inconnu {kind!r} — attendu {tuple(RID_BY_KIND)}")
+            raise ParametreInvalide("kind", f"inconnu {kind!r}, attendu {tuple(RID_BY_KIND)}")
         filters: dict[str, Any] = {}
         if siren:
             filters["SIREN_DEM"] = siren

@@ -26,6 +26,8 @@ from typing import Any, Optional
 
 import requests
 
+from .erreurs import ParametreInvalide
+
 from ._http import DEFAULT_TIMEOUT
 
 API = ("https://api-lannuaire.service-public.fr/api/explore/v2.1/catalog/datasets/"
@@ -130,7 +132,7 @@ class LannuaireClient:
             limit: services rendus, 1 à 100.
         """
         if not siren and not code_commune:
-            raise ValueError("Provide at least one of: siren, code_commune")
+            raise ParametreInvalide("siren, code_commune", "au moins l'un des deux")
         clauses = []
         if siren:
             clauses.append(f'siren="{siren}"')

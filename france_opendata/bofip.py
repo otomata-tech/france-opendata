@@ -27,6 +27,7 @@ from __future__ import annotations
 import re
 from typing import Any, Optional
 
+from .erreurs import ParametreInvalide
 from .opendatasoft import OpendatasoftClient
 
 PORTAL = "https://data.economie.gouv.fr"
@@ -84,7 +85,7 @@ class BofipClient:
         """
         query = query.strip()
         if len(query) < 3:
-            raise ValueError("query : au moins 3 caractères (2 à 5 mots-clés)")
+            raise ParametreInvalide("query", "au moins 3 caractères (2 à 5 mots-clés)")
         page = self.ods.records(
             DATASET, where=f'{litteral(query)} and type="Contenu"',
             select=CHAMPS + ",contenu", limit=limit)
@@ -99,11 +100,11 @@ class BofipClient:
         """Un commentaire ou une actualité en vigueur, texte intégral (`contenu`) compris.
 
         `None` si aucune publication en vigueur ne porte cette référence. Une référence
-        mal formée lève `ValueError` avant tout appel.
+        mal formée lève `ParametreInvalide` avant tout appel.
         """
         ref = identifiant_sans_date(identifiant)
         if not IDENTIFIANT_RE.match(ref):
-            raise ValueError(f"référence BOI attendue (BOI-… ou ACTU-…), reçu {identifiant!r}")
+            raise ParametreInvalide("identifiant", f"référence BOI attendue (BOI-… ou ACTU-…), reçu {identifiant!r}")
         page = self.ods.records(
             DATASET, where=f"identifiant_juridique={litteral(ref)}",
             select=CHAMPS + ",contenu", limit=1)

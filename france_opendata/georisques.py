@@ -21,6 +21,8 @@ from typing import Any, Optional
 
 import requests
 
+from .erreurs import ParametreInvalide
+
 BASE_URL = "https://www.georisques.gouv.fr/api/v1"
 TIMEOUT = 30
 
@@ -52,7 +54,7 @@ class GeorisquesClient:
             flags filières (industrie, carriere, eolienne, bovins...).
         """
         if not siret and not code_insee:
-            raise ValueError("Provide at least one of: siret, code_insee")
+            raise ParametreInvalide("siret, code_insee", "au moins l'un des deux")
         params: dict[str, Any] = {"page": page, "page_size": min(page_size, 100)}
         if siret:
             params["siret"] = siret

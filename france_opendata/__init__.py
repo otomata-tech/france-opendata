@@ -40,6 +40,9 @@
 - gels_avoirs (module) : registre national des gels d'avoirs (DG Trésor) — validation, contrôle d'un nom (et prénom), fraîcheur d'une copie ; téléchargement `gels_avoirs_ingest`. Pur, stockage au consommateur (service FOD = PostgreSQL).
 - acco (module)     : accords d'entreprise (base nationale des accords collectifs, DILA, depuis 09/2017) — parser `acco.parse_acco` + crawler `acco_ingest`, extra [stock] (defusedxml). Stockage/recherche au consommateur (oto-backend = PostgreSQL).
 
+Refus d'entrée : `ParametreInvalide` (sous-classe de ValueError) nomme le paramètre
+fautif, levée avant tout appel amont — un consommateur la rend en 400.
+
 Honnêteté de la donnée servie (une valeur qu'on ne peut pas servir telle quelle est
 MARQUÉE, jamais corrigée ni tue) — trois modules purs, sans I/O :
 - alertes (module)  : le vocabulaire FERMÉ des codes d'alerte + la certitude que chacun engage (prouvé vs inféré). Contrat lu par du code, publié dans l'OpenAPI du service.
@@ -87,6 +90,7 @@ from .egapro import EgaproClient
 from .frenchtech import FrenchTechClient
 from .aides import AidesClient
 from .bofip import BofipClient
+from .erreurs import ParametreInvalide  # refus d'entrée nommé (ValueError), cf. erreurs.py
 # ACCO = parser + crawler (pas de client de requête) : importer `france_opendata.acco`
 # (parse_acco) et `france_opendata.acco_ingest` directement. Idem pour le registre des
 # gels d'avoirs : `france_opendata.gels_avoirs` (pur) et `gels_avoirs_ingest` (téléchargement).
@@ -96,4 +100,4 @@ __all__ = ["EntreprisesClient", "SireneClient", "InpiClient", "BodaccClient", "B
            "EnedisClient", "OdreClient", "BdnbClient", "BegesClient", "IrepClient", "ElusClient", "LannuaireClient", "DecpClient", "DpeTertiaireClient", "BanClient", "ApiCartoClient", "PvgisClient",
            "IgnClient", "OverpassClient", "GpuClient", "QpvClient", "InseeMelodiClient", "InseeIrisClient", "EpfifClient",
            "OpendatasoftClient", "SpectacleClient", "FinessClient", "HasEssmsClient",
-           "EgaproClient", "FrenchTechClient", "AidesClient", "BofipClient"]
+           "EgaproClient", "FrenchTechClient", "AidesClient", "BofipClient", "ParametreInvalide"]

@@ -14,6 +14,7 @@ from typing import Optional, List, Dict, Any
 import requests
 
 from . import finances
+from .erreurs import ParametreInvalide
 
 
 class EntreprisesClient:
@@ -53,11 +54,15 @@ class EntreprisesClient:
             naf: List of NAF codes (activite_principale)
             departement: Department code (e.g., '75')
             code_postal: Postal code
-            commune: City name
+            commune: Code INSEE de la commune (5 caractères, ex. '35238' = Rennes) — pas
+                son nom (« Paris » est refusé par l'API). Paris, Lyon et Marseille se
+                filtrent par arrondissement (75101…) : le code de la commune entière
+                (75056) ne trouve rien. Le filtre porte sur les établissements, pas le
+                seul siège.
             employees: List of employee range codes (tranche effectif unité légale)
             categorie_entreprise: INSEE size category — 'PME', 'ETI' or 'GE'
-            ca_min: Minimum turnover (chiffre d'affaires)
-            ca_max: Maximum turnover
+            ca_min: Minimum turnover (chiffre d'affaires), en euros, > 0
+            ca_max: Maximum turnover, en euros, > 0
             idcc: List of IDCC codes (convention collective, e.g. ['1285', '3090'])
             nature_juridique: Legal-form codes (catégorie juridique INSEE niveau III,
                 e.g. ['6540'] for SCI, ['5710'] for SAS). Decisive when the form is
@@ -71,7 +76,8 @@ class EntreprisesClient:
             API response with results array and metadata
 
         Raises:
-            ValueError: If no search parameters provided
+            ParametreInvalide: aucun critère, plus d'un IDCC, ou `ca_min` / `ca_max`
+                nul ou négatif — avant tout appel
             Exception: On API error
         """
         params = {
@@ -97,10 +103,14 @@ class EntreprisesClient:
             params["tranche_effectif_salarie"] = ",".join(employees)
         if categorie_entreprise:
             params["categorie_entreprise"] = categorie_entreprise
-        if ca_min:
-            params["ca_min"] = ca_min
-        if ca_max:
-            params["ca_max"] = ca_max
+        # `if ca_min:` laissait tomber un 0 en silence — et, seul critère, finissait en
+        # « aucun critère ». Un seuil nul ou négatif ne filtre rien : refusé, nommé.
+        for nom, seuil in (("ca_min", ca_min), ("ca_max", ca_max)):
+            if seuil is None:
+                continue
+            if seuil <= 0:
+                raise ParametreInvalide(nom, "chiffre d'affaires en euros, strictement positif")
+            params[nom] = seuil
         if idcc:
             # L'API n'accepte QU'UN SEUL IDCC, sur EXACTEMENT 4 caractères (zéro de
             # tête compris) : joindre plusieurs codes par une virgule déclenche un 400
@@ -109,11 +119,9 @@ class EntreprisesClient:
             # une fois par code et fusionner (une entreprise peut porter N IDCC).
             codes = [str(c).strip() for c in idcc if str(c).strip()]
             if len(codes) > 1:
-                raise ValueError(
-                    "id_convention_collective n'accepte qu'UN seul IDCC par requête "
-                    f"(reçu {len(codes)}) — appelle une fois par code puis fusionne "
-                    "les résultats (dédup par siren)."
-                )
+                raise ParametreInvalide(
+                    "idcc", f"un seul IDCC par requête (reçu {len(codes)}) — appeler une "
+                    "fois par code puis fusionner les résultats (dédup par siren)")
             if codes:
                 params["id_convention_collective"] = codes[0].zfill(4)
         if nature_juridique:
@@ -129,10 +137,10 @@ class EntreprisesClient:
             "ca_min", "ca_max", "id_convention_collective", "nature_juridique",
         ]
         if not any(p in params for p in search_params):
-            raise ValueError(
-                "At least one search parameter required: "
-                "query, naf, departement, code_postal, commune, employees, ca_min, ca_max"
-            )
+            raise ParametreInvalide(
+                "query, naf, departement, code_postal, commune, employees, "
+                "categorie_entreprise, ca_min, ca_max, idcc, nature_juridique",
+                "au moins un critère de recherche")
 
         resp = requests.get(
             f"{self.BASE_URL}/search",
@@ -164,11 +172,15 @@ class EntreprisesClient:
             siren: 9-digit SIREN number
 
         Returns:
-            Company data or None if not found
+            Company data, or None when no result carries EXACTLY this SIREN.
+
+        La recherche plein texte rend des résultats approchants pour un SIREN inconnu :
+        se rabattre sur le premier servait la fiche d'une AUTRE entreprise sous le
+        SIREN demandé. Seule une correspondance exacte est rendue.
         """
         resp = requests.get(
             f"{self.BASE_URL}/search",
-            params={"q": siren, "per_page": 1},
+            params={"q": siren, "per_page": 5},
             timeout=30,
         )
 
@@ -183,12 +195,10 @@ class EntreprisesClient:
         if not results:
             return None
 
-        # Find exact SIREN match
         for r in results:
             if r.get("siren") == siren:
                 return finances.annotate_company(r)
-
-        return finances.annotate_company(results[0]) if results else None
+        return None
 
     def get_directors(self, siren: str) -> List[Dict[str, Any]]:
         """
