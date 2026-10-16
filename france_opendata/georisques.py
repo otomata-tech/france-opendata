@@ -104,9 +104,23 @@ class GeorisquesClient:
     def alea_argiles(self, lon: float, lat: float) -> dict[str, Any]:
         """Aléa retrait-gonflement des argiles (RGA) au point (lon, lat).
 
-        Returns {"code_exposition", "exposition"} — niveau d'exposition (faible /
-        moyen / fort) au point. L'argile fort est un facteur de coût fondations.
+        Returns {"code_exposition", "exposition", "donnee"} — niveau d'exposition
+        (faible / moyen / fort) au point. Sans donnée au point : exposition et code à
+        None, donnee=False et une `note`. L'argile fort est un facteur de coût fondations.
         """
-        data = self._get("rga", {"latlon": f"{lon},{lat}"})
+        resp = requests.get(
+            f"{BASE_URL}/rga",
+            params={"latlon": f"{lon},{lat}"},
+            headers={"Accept": "application/json", "User-Agent": "france-opendata"},
+            timeout=TIMEOUT,
+        )
+        resp.raise_for_status()
+        # Hors couverture RGA, Géorisques répond 200 avec un corps VIDE : c'est
+        # « pas de donnée pour ce point », pas une panne.
+        if not resp.content.strip():
+            return {"code_exposition": None, "exposition": None, "donnee": False,
+                    "note": "Géorisques n'a pas de donnée d'aléa retrait-gonflement "
+                            "des argiles pour ce point."}
+        data = resp.json()
         return {"code_exposition": data.get("codeExposition"),
-                "exposition": data.get("exposition")}
+                "exposition": data.get("exposition"), "donnee": True}
