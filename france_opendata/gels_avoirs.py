@@ -14,8 +14,14 @@ ferait conclure « aucune correspondance » : `valider` lève `RegistreInvalide`
 `verifier_fraicheur` lève sur une copie trop ancienne. L'appelant rend une erreur, pas
 une réponse vide.
 
-**Le prénom affine, il n'écarte jamais.** Une graphie différente, ou une entité sans
-prénom, garde sa correspondance sur le nom, signalée comme telle (`nom_seul`).
+**Le prénom ordonne, il n'écarte jamais.** Toutes les correspondances sur le nom sont
+rendues ; chacune dit si elle porte aussi le prénom (`sur` = `nom_et_prenom`) ou le nom
+seul (`nom_seul` : graphie différente du prénom, entité sans prénom…), celles qui
+portent le prénom en tête. Une vigilance ne masque jamais une correspondance.
+
+**Les lettres latines que la décomposition Unicode ne réduit pas** (ł, ø, đ, ß, æ, œ,
+ı, ə…) sont translittérées par une table explicite (`_TRANSLITTERATION`) : sans elle,
+« Łukasz » ne se trouve pas en tapant « Lukasz ».
 """
 from __future__ import annotations
 
@@ -100,12 +106,25 @@ def inscrits(registre: dict) -> list[dict]:
     } for i in valider(registre)["Publications"]["PublicationDetail"]]
 
 
+#: Lettres latines sans décomposition Unicode : NFKD + retrait des marques les laisse
+#: telles quelles, et `[^a-z0-9]` les effacerait — « Łukasz » deviendrait « ukasz ».
+#: Clés en minuscules (appliquée après `lower()`). `ə` (azéri) se romanise « a »
+#: (Əliyev → Aliyev) ; il figure dans le registre, comme `ı`, `œ` et `ĸ` (16/10/2026).
+_TRANSLITTERATION = str.maketrans({
+    "ł": "l", "ø": "o", "đ": "d", "ð": "d", "ß": "ss", "æ": "ae", "œ": "oe", "ı": "i",
+    "ə": "a", "þ": "th", "ħ": "h", "ŀ": "l", "ŧ": "t", "ĸ": "k", "ŋ": "n", "ſ": "s",
+    "ƒ": "f", "ŉ": "n", "ɨ": "i", "ʉ": "u", "ɛ": "e", "ɔ": "o",
+})
+
+
 def normaliser(texte: str) -> str:
-    """En minuscules, sans accents ni ponctuation : la comparaison d'un nom écrit de
-    plusieurs façons. Un alias en cyrillique ou en arabe s'y réduit à rien."""
-    sans_marques = "".join(c for c in unicodedata.normalize("NFD", texte)
+    """En minuscules, sans accents ni ponctuation, lettres latines translittérées : la
+    comparaison d'un nom écrit de plusieurs façons. Un alias en cyrillique ou en arabe
+    s'y réduit à rien."""
+    sans_marques = "".join(c for c in unicodedata.normalize("NFKD", texte)
                            if not unicodedata.category(c).startswith("M"))
-    return re.sub(r"[^a-z0-9]+", " ", sans_marques.lower()).strip()
+    latin = sans_marques.lower().translate(_TRANSLITTERATION)
+    return re.sub(r"[^a-z0-9]+", " ", latin).strip()
 
 
 def correspondances(lignes: list[dict], nom: str, prenom: Optional[str] = None) -> list[dict]:
@@ -130,9 +149,11 @@ def correspondances(lignes: list[dict], nom: str, prenom: Optional[str] = None) 
     return out
 
 
-def fiche(ligne: dict) -> dict:
-    """Ce qu'un contrôle rend d'un inscrit : de quoi comparer avant de conclure."""
+def fiche(ligne: dict, sur: str) -> dict:
+    """Ce qu'un contrôle rend d'un inscrit : de quoi comparer avant de conclure, et sur
+    quoi il correspond (`nom_et_prenom` ou `nom_seul`)."""
     return {
+        "sur": sur,
         "id_registre": ligne["id_registre"],
         "nature": ligne["nature"],
         "nom": ligne["nom"],
@@ -146,18 +167,22 @@ def controler(lignes: list[dict], nom: str, prenom: Optional[str] = None,
               limit: int = 10) -> dict:
     """Le contrôle d'un nom (et d'un prénom) contre les lignes d'un registre validé.
 
-    Renvoie `{total, nom_seul, correspondances}` : `correspondances` porte les `limit`
-    premières fiches, `total` leur nombre entier. `nom_seul` est vrai quand un prénom
-    était donné, qu'aucun inscrit ne le porte, et que des inscrits portent le nom : les
-    correspondances rendues le sont alors sur le NOM SEUL.
+    Renvoie `{total, nom_et_prenom, nom_seul, correspondances}`. TOUTES les
+    correspondances sur le nom comptent dans `total` ; `nom_et_prenom` et `nom_seul` les
+    décomptent (sans prénom demandé, toutes sont `nom_seul`). `correspondances` porte
+    les `limit` premières fiches, celles qui portent aussi le prénom en tête, chacune
+    marquée par `sur`. `limit` borne la liste, jamais les comptes.
     """
     sur_le_nom = correspondances(lignes, nom)
-    avec_prenom = correspondances(sur_le_nom, nom, prenom) if prenom is not None else sur_le_nom
-    trouves = avec_prenom or sur_le_nom
+    avec_prenom = correspondances(sur_le_nom, nom, prenom) if prenom is not None else []
+    ids = {id(t) for t in avec_prenom}
+    fiches = ([fiche(t, "nom_et_prenom") for t in avec_prenom]
+              + [fiche(t, "nom_seul") for t in sur_le_nom if id(t) not in ids])
     return {
-        "total": len(trouves),
-        "nom_seul": prenom is not None and not avec_prenom and bool(sur_le_nom),
-        "correspondances": [fiche(t) for t in trouves[:limit]],
+        "total": len(sur_le_nom),
+        "nom_et_prenom": len(avec_prenom),
+        "nom_seul": len(sur_le_nom) - len(avec_prenom),
+        "correspondances": fiches[:limit],
     }
 
 

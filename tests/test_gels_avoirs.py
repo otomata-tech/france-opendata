@@ -80,23 +80,73 @@ def test_normaliser_ote_accents_casse_et_ponctuation():
     assert g.normaliser("Григорий") == ""
 
 
+@pytest.mark.parametrize("brut, attendu", [
+    ("Łukasz Wałęsa", "lukasz walesa"),
+    ("Søren Ødegård", "soren odegard"),
+    ("Đorđe Đukić", "dorde dukic"),
+    ("Straße", "strasse"),
+    ("STRAẞE", "strasse"),
+    ("Lætitia Cœur", "laetitia coeur"),
+    ("Yıldırım", "yildirim"),
+    ("İsmail", "ismail"),
+    ("Əliyev", "aliyev"),
+    ("Þórður", "thordur"),
+    ("Ĳsbrand", "ijsbrand"),
+])
+def test_normaliser_translittere_les_lettres_sans_decomposition(brut, attendu):
+    """NFD laisse ł, ø, đ, ß, æ, œ, ı, ə… tels quels ; sans table, ils s'effaceraient."""
+    assert g.normaliser(brut) == attendu
+
+
+@pytest.mark.parametrize("inscrit, cherche", [
+    ("WAŁĘSA", "Walesa"), ("ØDEGÅRD", "Odegard"), ("ĐUKIĆ", "Dukic"),
+    ("STRAßBERG", "Strassberg"), ("YILDIRIM", "Yıldırım"), ("ƏLIYEV", "Aliyev"),
+    ("CŒUR", "Coeur"),
+])
+def test_un_inscrit_ecrit_en_lettres_speciales_se_trouve_en_ascii(inscrit, cherche):
+    lignes = g.inscrits(_registre())
+    lignes[2]["nom"] = inscrit
+    r = g.controler(lignes, cherche)
+    assert r["total"] == 1 and r["correspondances"][0]["nom"] == inscrit
+
+
 def test_nom_et_prenom_trouvent_l_inscrit(lignes):
     r = g.controler(lignes, "shilkin", "Grigory")
-    assert r["total"] == 1 and r["nom_seul"] is False
+    assert (r["total"], r["nom_et_prenom"], r["nom_seul"]) == (1, 1, 0)
     assert r["correspondances"][0] == {
-        "id_registre": 1, "nature": "Personne physique", "nom": "SHILKIN",
+        "sur": "nom_et_prenom", "id_registre": 1, "nature": "Personne physique", "nom": "SHILKIN",
         "prenoms": "Grigory Vladimirovich", "naissance": "20/10/1976", "fondement": "(UE) 269/2014"}
 
 
 def test_le_prenom_affine_sans_jamais_ecarter(lignes):
     """Aucun prénom inscrit ne correspond : la correspondance sur le nom reste, signalée."""
     r = g.controler(lignes, "Shilkin", "Jean")
-    assert r["total"] == 1 and r["nom_seul"] is True
+    assert (r["total"], r["nom_et_prenom"], r["nom_seul"]) == (1, 0, 1)
+    assert r["correspondances"][0]["sur"] == "nom_seul"
+
+
+def test_une_correspondance_nom_et_prenom_ne_masque_pas_celles_sur_le_nom_seul():
+    """Trois LEFEBVRE : un seul porte le prénom cherché. Tous sont rendus, celui qui
+    porte le prénom en tête."""
+    lignes = g.inscrits(_registre())
+    lignes[3].update(nom="LEFEBVRE", prenoms=["Paul"])
+    lignes[4].update(nom="LEFEBVRE", prenoms=["Jean"])
+    lignes[5].update(nom="LEFEBVRE", prenoms=[])
+    r = g.controler(lignes, "Lefebvre", "Jean")
+    assert (r["total"], r["nom_et_prenom"], r["nom_seul"]) == (3, 1, 2)
+    assert [(c["sur"], c["prenoms"]) for c in r["correspondances"]] == [
+        ("nom_et_prenom", "Jean"), ("nom_seul", "Paul"), ("nom_seul", None)]
+
+
+def test_sans_prenom_demande_tout_est_sur_le_nom_seul(lignes):
+    r = g.controler(lignes, "Shilkin")
+    assert (r["total"], r["nom_et_prenom"], r["nom_seul"]) == (1, 0, 1)
+    assert r["correspondances"][0]["sur"] == "nom_seul"
 
 
 def test_tous_les_mots_du_nom_doivent_y_etre(lignes):
     assert g.controler(lignes, "Dupont Martin")["total"] == 1
-    assert g.controler(lignes, "dupont-martin", "elodie")["nom_seul"] is False
+    assert g.controler(lignes, "dupont-martin", "elodie")["nom_et_prenom"] == 1
     assert g.controler(lignes, "Dupont Durand")["total"] == 0
     # Un mot entier, pas un fragment : « Dupon » n'est pas « Dupont ».
     assert g.controler(lignes, "Dupon")["total"] == 0
@@ -104,12 +154,13 @@ def test_tous_les_mots_du_nom_doivent_y_etre(lignes):
 
 def test_une_entite_sans_prenom_se_trouve_par_son_nom(lignes):
     r = g.controler(lignes, "SCI Les Hortillons", "Jean")
-    assert r["total"] == 1 and r["nom_seul"] is True
+    assert (r["total"], r["nom_seul"]) == (1, 1)
     assert r["correspondances"][0]["prenoms"] is None
 
 
 def test_aucune_correspondance(lignes):
-    assert g.controler(lignes, "Durand", "Jean") == {"total": 0, "nom_seul": False, "correspondances": []}
+    assert g.controler(lignes, "Durand", "Jean") == {
+        "total": 0, "nom_et_prenom": 0, "nom_seul": 0, "correspondances": []}
 
 
 def test_un_alias_latin_trouve_l_inscrit():
@@ -133,7 +184,7 @@ def test_limit_borne_les_fiches_pas_le_total(lignes):
     for ligne in tous[3:8]:
         ligne["alias"] = ["PATRONYME COMMUN"]
     r = g.controler(tous, "patronyme commun", limit=2)
-    assert r["total"] == 5 and len(r["correspondances"]) == 2
+    assert r["total"] == 5 and r["nom_seul"] == 5 and len(r["correspondances"]) == 2
 
 
 # --- fraîcheur d'une copie gardée ---------------------------------------------
