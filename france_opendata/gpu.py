@@ -57,9 +57,29 @@ _IDURBA = re.compile(
     r"^(?P<territoire>[0-9A-Z]{5,9})_(?P<type>PLUI|PLU|POS|CC|PSMV)_(?P<date>\d{8})"
     r"(?:_(?P<secteur>[0-9A-Z]{1,5}))?$", re.IGNORECASE)
 
-# Intitulé GPU de la pièce « règlement écrit » (le règlement graphique est le zonage).
+# La pièce « règlement écrit » se reconnaît à son intitulé GPU (« Règlement écrit ») OU à
+# son nom de fichier CNIG, `<territoire>_reglement[_<n°|tome<n°>>]_<AAAAMMJJ>[_<secteur>].pdf`
+# (le règlement graphique, `_reglement_graphique_…`, est le zonage ; une annexe nommée
+# autrement n'est pas prise). L'intitulé est libre pour l'autorité qui publie : vu
+# « L - Règlement - M - Règlement de zones spécifiques » pour 200054807_reglement_20260803_A.pdf
+# (PLUi Aix-Marseille-Provence, volet A), qu'une recherche par intitulé seul manquait.
 _TITRE_REGLEMENT_ECRIT = "reglement ecrit"
 _NOM_PIECE = re.compile(r"^[\w.-]+\.pdf$", re.IGNORECASE)  # l'URL se construit avec
+_NOM_REGLEMENT_ECRIT = re.compile(
+    r"^(?P<territoire>[0-9A-Z]{5,9})_reglement(?:_(?:tome)?\d{1,2})?_\d{8}"
+    r"(?:_[0-9A-Z]{1,5})?\.pdf$", re.IGNORECASE)
+
+
+def _est_reglement_ecrit(piece: dict, territoire: str) -> bool:
+    """La pièce est le règlement écrit du document : intitulé normalisé, ou nom CNIG du
+    même territoire (un `PPRT_reglement` annexé n'en est pas un)."""
+    nom = piece.get("name") or ""
+    if not _NOM_PIECE.match(nom):
+        return False
+    if _sans_accents(piece.get("title") or "") == _TITRE_REGLEMENT_ECRIT:
+        return True
+    m = _NOM_REGLEMENT_ECRIT.match(nom)
+    return bool(m) and m["territoire"].upper() == territoire.upper()
 
 
 def _sans_accents(s: str) -> str:
@@ -153,7 +173,8 @@ class GpuClient:
         Le nom de fichier porté par la couche de zonage (`nomfic`) n'est pas fiable (vu :
         fichier absent du dépôt pendant le remplacement d'un PLUi) : on part du document
         publié (API Carto, couche `document`) et de sa liste de pièces (intitulé
-        « Règlement écrit »). Un document peut garder les règlements de ses procédures
+        « Règlement écrit », ou nom de fichier CNIG du règlement écrit : l'intitulé est
+        libre, cf. `_est_reglement_ecrit`). Un document peut garder les règlements de ses procédures
         antérieures (vu : six pièces de 2005 à 2019 pour un PLU de 2019) : seules les
         pièces datées du document sont retenues ; les autres sont nommées dans
         `pieces_ecartees`. Plusieurs pièces à la même date (tomes) sont toutes retenues.
@@ -169,7 +190,8 @@ class GpuClient:
                 « règlement écrit » (une carte communale n'en a pas : le RNU s'applique).
         """
         partition = self.partition_of(idurba)
-        date = self._idurba(idurba)["date"]
+        m = self._idurba(idurba)
+        date = m["date"]
         docs = self.documents(partition)
         doc = next((d for d in docs if (d.get("name") or "").upper() == idurba.strip().upper()), None)
         autres = [d["name"] for d in docs if d.get("name") and d is not doc]
@@ -179,9 +201,7 @@ class GpuClient:
                 f"(partition {partition}).", autres_documents=autres)
         doc_id = doc.get("gpu_doc_id") or doc.get("id")
         pieces = self.pieces(doc_id)
-        noms = [p["name"] for p in pieces
-                if _NOM_PIECE.match(p.get("name") or "")
-                and _sans_accents(p.get("title") or "") == _TITRE_REGLEMENT_ECRIT]
+        noms = [p["name"] for p in pieces if _est_reglement_ecrit(p, m["territoire"])]
         if not noms:
             raise ReglementIntrouvable(
                 f"Le document {idurba} ne publie pas de règlement écrit sur le Géoportail "

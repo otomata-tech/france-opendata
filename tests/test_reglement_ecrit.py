@@ -6,7 +6,7 @@ import time
 
 import pytest
 
-from france_opendata import reglement
+from france_opendata import gpu, reglement
 from france_opendata.erreurs import ParametreInvalide
 from france_opendata.gpu import GpuClient, ReglementIntrouvable
 
@@ -125,6 +125,45 @@ def test_plusieurs_pieces_aucune_datee_ambigu(monkeypatch):
 
     with pytest.raises(ReglementIntrouvable, match="aucune datée du document"):
         c.reglement_ecrit("80021_PLU_20251211")
+
+
+def test_reglement_ecrit_reconnu_a_son_nom_cnig_quand_l_intitule_est_libre(monkeypatch):
+    # PLUi Aix-Marseille-Provence, volet A (Marseille) : le GPU intitule la pièce
+    # « L - Règlement - M - Règlement de zones spécifiques », pas « Règlement écrit ».
+    doc = {"name": "200054807_PLUi_20260803_A", "gpu_doc_id": "3d08", "du_type": "PLUi",
+           "grid_title": "PLUI AIX-MARSEILLE-PROVENCE", "partition": "DU_200054807_A"}
+    c, _ = _client(monkeypatch, [doc], [
+        {"name": "200054807_rapport_1_20260803_A.pdf",
+         "title": "B1 - Rapport de présentation - Introduction générale", "path": "Rapport de présentation"},
+        {"name": "200054807_prescription_surf_05_01_20260803_A.pdf",
+         "title": "O1 - Liste des emplacements réservés pour voirie", "path": "Règlements"},
+        {"name": "200054807_reglement_20260803_A.pdf",
+         "title": "L - Règlement - M - Règlement de zones spécifiques", "path": "Règlements"},
+        {"name": "200054807_reglement_graphique_0_20260803_A.pdf",
+         "title": "P0 - Tableau d'assemblage du PLUi", "path": "Règlements"},
+        {"name": "200054807_PPRT_reglement_20260803_A.pdf", "title": "PPRT", "path": "Annexes"},
+        {"name": "13055_reglement_20260803_A.pdf", "title": "Règlement communal", "path": "Annexes"},
+    ])
+
+    r = c.reglement_ecrit("200054807_PLUI_20260803_A")  # casse du zonage
+
+    assert r["fichiers"] == [{
+        "nom": "200054807_reglement_20260803_A.pdf",
+        "url": "https://data.geopf.fr/annexes/gpu/documents/DU_200054807_A/3d08/"
+               "200054807_reglement_20260803_A.pdf"}]
+    assert r["pieces_ecartees"] == []
+
+
+@pytest.mark.parametrize("nom, attendu", [
+    ("80021_reglement_2_20251211.pdf", True),
+    ("80021_reglement_tome1_20251211.pdf", True),
+    ("80021_reglement_graphique_1_20251211.pdf", False),
+    ("80021_reglement_annexe_20251211.pdf", False),
+    ("80021_PPRT_reglement_20251211.pdf", False),
+    ("80022_reglement_20251211.pdf", False),     # un autre territoire
+])
+def test_nom_cnig_du_reglement_ecrit(nom, attendu):
+    assert gpu._est_reglement_ecrit({"name": nom, "title": "Pièce"}, "80021") is attendu
 
 
 def test_document_sans_reglement_ecrit(monkeypatch):
