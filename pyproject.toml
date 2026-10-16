@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "france-opendata"
 version = "0.48.0"
-description = "Connecteurs Python data publique France (open data) : entreprises (Recherche Entreprises, Sirene, INPI bilans, BODACC), accords collectifs d'entreprise (ACCO), index égalité F-H (Egapro), marchés publics (BOAMP), immobilier (DVF+ Cerema), foncier/cadastre/urbanisme (BAN, API Carto, BDTOPO, Sit@del, GPU, QPV, Géorisques, EPFIF), énergie (Enedis, PVGIS), socio-démo (INSEE Mélodi commune, INSEE IRIS quartier), culture, santé (FINESS, ESSMS HAS), doctrine fiscale (BOFiP), registre des gels d'avoirs (DG Trésor). Sans clé sauf Sirene. Détail : README."
+description = "Connecteurs Python data publique France (open data) : entreprises, BODACC, INPI, marchés publics, DVF, foncier, cadastre et urbanisme, Géorisques, énergie, INSEE, santé, BOFiP, gels d'avoirs. Sans clé sauf Sirene. Détail : README."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
