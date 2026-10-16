@@ -26,7 +26,7 @@
 - PvgisClient       : PVGIS JRC (productible solaire annuel pour un point + kWc) — sans clé
 - IgnClient         : IGN Géoplateforme navigation — isochrone (zone atteignable en N min à pied/voiture, GeoJSON) — sans clé
 - OverpassClient    : OpenStreetMap Overpass — POIs par tag sur une zone (commune/dept/bbox), recensement exhaustif en 1 appel — sans clé
-- GpuClient         : Géoportail de l'Urbanisme (zonage PLU/PLUi d'un point, prescriptions, servitudes, URL règlement) — sans clé
+- GpuClient         : Géoportail de l'Urbanisme (zonage PLU/PLUi d'un point, prescriptions, servitudes, règlement écrit par idurba) — sans clé
 - QpvClient         : Quartiers Prioritaires de la Ville (dataset national, par commune / proximité d'un point) — sans clé
 - InseeMelodiClient : INSEE Mélodi — données locales par commune (population, familles, revenus, logement) — sans clé
 - InseeIrisClient   : INSEE recensement à l'IRIS (quartier) — parquet bundlé RP 2021, par IRIS ou par commune/arrondissement — extra [stock]

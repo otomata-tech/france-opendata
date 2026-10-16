@@ -39,7 +39,7 @@ donne + clé + exposition oto + statut. Le détail par client vit dans son modul
 
 | Client | Source | Donne | Clé |
 |---|---|---|---|
-| `GpuClient` | Géoportail de l'Urbanisme | zonage PLU/PLUi, prescriptions, servitudes, URL règlement | — |
+| `GpuClient` | Géoportail de l'Urbanisme | zonage PLU/PLUi, prescriptions, servitudes, PDF du règlement écrit par idurba (`reglement_ecrit`) ; lecture par chapitre de zone (`reglement.section_zone`) | — |
 | `QpvClient` | Quartiers Prioritaires de la Ville | QPV par commune / proximité d'un point | — |
 | `EpfifClient` | EPFIF (Île-de-France) | secteurs d'intervention (scrape live + cache) | — |
 

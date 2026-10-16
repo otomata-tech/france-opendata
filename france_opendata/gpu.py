@@ -17,13 +17,20 @@ libellés). Géocodage et cadastre sont chez `BanClient` / `ApiCartoClient`.
 from __future__ import annotations
 
 import json
+import re
 import time
+import unicodedata
 from typing import Any, Optional
 
 import requests
 
+from .erreurs import ParametreInvalide
+
 GPU_BASE = "https://apicarto.ign.fr/api/gpu/"
 ANNEXES_BASE = "https://data.geopf.fr/annexes/gpu/documents"
+# API du site Géoportail de l'Urbanisme : liste des pièces écrites d'un document publié
+# (nom de fichier + intitulé normalisé CNIG, ex. « Règlement écrit »).
+GPU_SITE_API = "https://www.geoportail-urbanisme.gouv.fr/api"
 TIMEOUT = 30
 RETRIES = 3  # apicarto/GPU renvoie des 503/timeout transitoires sous charge
 
@@ -40,6 +47,37 @@ GPU_LAYERS = [
     ("document", "document"),
     ("assiette-sup-s", "servitude"),
 ]
+
+
+# idurba (standard CNIG) : <territoire>_<type>_<date d'approbation>[_<code de secteur>]
+# ex. 80021_PLU_20251211, 200046977_PLUI_20260326, 200054807_PLUi_20260306_B,
+# 31555_PSMV_20250217. La partition GPU s'en déduit : DU_<territoire>[_<secteur>]
+# pour un document d'urbanisme, PSMV_<territoire>[_<secteur>] pour un PSMV.
+_IDURBA = re.compile(
+    r"^(?P<territoire>[0-9A-Z]{5,9})_(?P<type>PLUI|PLU|POS|CC|PSMV)_(?P<date>\d{8})"
+    r"(?:_(?P<secteur>[0-9A-Z]{1,5}))?$", re.IGNORECASE)
+
+# Intitulé GPU de la pièce « règlement écrit » (le règlement graphique est le zonage).
+_TITRE_REGLEMENT_ECRIT = "reglement ecrit"
+_NOM_PIECE = re.compile(r"^[\w.-]+\.pdf$", re.IGNORECASE)  # l'URL se construit avec
+
+
+def _sans_accents(s: str) -> str:
+    return "".join(c for c in unicodedata.normalize("NFD", s)
+                   if unicodedata.category(c) != "Mn").casefold().strip()
+
+
+class ReglementIntrouvable(LookupError):
+    """Le GPU ne publie pas (ou plus) le règlement écrit de ce document.
+
+    `autres_documents` = les idurba publiés en production sur la même partition : un
+    document plus récent a pu remplacer celui demandé. Aucun n'est substitué en silence."""
+
+    def __init__(self, message: str, *, autres_documents: Optional[list[str]] = None):
+        self.autres_documents = autres_documents or []
+        if self.autres_documents:
+            message += " Documents publiés sur la partition : " + ", ".join(self.autres_documents) + "."
+        super().__init__(message)
 
 
 class GpuClient:
@@ -63,6 +101,105 @@ class GpuClient:
                 if attempt < self._retries - 1:
                     time.sleep(0.8 * (attempt + 1))
         return None, last
+
+    def _get_json(self, url: str, params: Optional[dict] = None) -> Any:
+        """GET JSON avec reprise sur erreur transitoire ; l'échec final PROPAGE (pas de
+        dégradation : sans réponse on ne sait rien du document)."""
+        for attempt in range(self._retries):
+            last = attempt == self._retries - 1
+            try:
+                resp = self._session.get(url, params=params, timeout=self._timeout)
+            except (requests.ConnectionError, requests.Timeout):
+                if last:
+                    raise
+            else:
+                if resp.status_code < 500 or last:
+                    resp.raise_for_status()
+                    return resp.json()
+            time.sleep(0.8 * (attempt + 1))
+        raise RuntimeError("GpuClient._get_json : boucle de reprise épuisée")  # garde-fou
+
+    @staticmethod
+    def _idurba(idurba: str) -> re.Match:
+        m = _IDURBA.match((idurba or "").strip())
+        if not m:
+            raise ParametreInvalide(
+                "idurba", "format attendu <territoire>_<PLU|PLUi|POS|CC|PSMV>_<AAAAMMJJ>"
+                          "[_<secteur>], tel que rendu par le zonage GPU")
+        return m
+
+    @staticmethod
+    def partition_of(idurba: str) -> str:
+        """Partition GPU d'un idurba (cf. `_IDURBA`). Refus d'entrée nommé si le format
+        n'est pas celui du standard CNIG."""
+        m = GpuClient._idurba(idurba)
+        prefixe = "PSMV" if m["type"].upper() == "PSMV" else "DU"
+        part = f"{prefixe}_{m['territoire'].upper()}"
+        return f"{part}_{m['secteur'].upper()}" if m["secteur"] else part
+
+    def documents(self, partition: str) -> list[dict]:
+        """Documents publiés (couche `document` d'API Carto) d'une partition : propriétés
+        seules (`name` = idurba, `gpu_doc_id`, `du_type`, `grid_title`, `gpu_status`…)."""
+        data = self._get_json(GPU_BASE + "document", {"partition": partition})
+        return [f.get("properties") or {} for f in (data or {}).get("features", [])]
+
+    def pieces(self, gpu_doc_id: str) -> list[dict]:
+        """Pièces écrites d'un document publié : `[{name, title, path}]`."""
+        return self._get_json(f"{GPU_SITE_API}/document/{gpu_doc_id}/files") or []
+
+    def reglement_ecrit(self, idurba: str) -> dict[str, Any]:
+        """Résout le(s) PDF du règlement écrit d'un document d'urbanisme par son idurba.
+
+        Le nom de fichier porté par la couche de zonage (`nomfic`) n'est pas fiable (vu :
+        fichier absent du dépôt pendant le remplacement d'un PLUi) : on part du document
+        publié (API Carto, couche `document`) et de sa liste de pièces (intitulé
+        « Règlement écrit »). Un document peut garder les règlements de ses procédures
+        antérieures (vu : six pièces de 2005 à 2019 pour un PLU de 2019) : seules les
+        pièces datées du document sont retenues ; les autres sont nommées dans
+        `pieces_ecartees`. Plusieurs pièces à la même date (tomes) sont toutes retenues.
+
+        Returns:
+            {idurba, partition, gpu_doc_id, du_type, titre, fichiers: [{nom, url}],
+             pieces_ecartees, autres_documents} — `autres_documents` = les autres idurba
+            publiés sur la partition (un remplaçant en cours de publication, à signaler
+            sans substituer).
+        Raises:
+            ParametreInvalide: idurba mal formé.
+            ReglementIntrouvable: document non publié sur la partition, ou sans pièce
+                « règlement écrit » (une carte communale n'en a pas : le RNU s'applique).
+        """
+        partition = self.partition_of(idurba)
+        date = self._idurba(idurba)["date"]
+        docs = self.documents(partition)
+        doc = next((d for d in docs if (d.get("name") or "").upper() == idurba.strip().upper()), None)
+        autres = [d["name"] for d in docs if d.get("name") and d is not doc]
+        if doc is None:
+            raise ReglementIntrouvable(
+                f"Le document {idurba} n'est pas publié sur le Géoportail de l'Urbanisme "
+                f"(partition {partition}).", autres_documents=autres)
+        doc_id = doc.get("gpu_doc_id") or doc.get("id")
+        pieces = self.pieces(doc_id)
+        noms = [p["name"] for p in pieces
+                if _NOM_PIECE.match(p.get("name") or "")
+                and _sans_accents(p.get("title") or "") == _TITRE_REGLEMENT_ECRIT]
+        if not noms:
+            raise ReglementIntrouvable(
+                f"Le document {idurba} ne publie pas de règlement écrit sur le Géoportail "
+                f"de l'Urbanisme ({len(pieces)} pièce(s) publiées).", autres_documents=autres)
+        retenus = [n for n in noms if f"_{date}" in n] or (noms if len(noms) == 1 else [])
+        if not retenus:
+            raise ReglementIntrouvable(
+                f"Le document {idurba} publie {len(noms)} pièces « règlement écrit », aucune "
+                f"datée du document ({date}) : impossible de dire laquelle s'applique "
+                f"({', '.join(sorted(noms))}).", autres_documents=autres)
+        return {
+            "idurba": idurba, "partition": partition, "gpu_doc_id": doc_id,
+            "du_type": doc.get("du_type"), "titre": doc.get("grid_title"),
+            "fichiers": [{"nom": n, "url": f"{ANNEXES_BASE}/{partition}/{doc_id}/{n}"}
+                         for n in sorted(retenus)],
+            "pieces_ecartees": sorted(set(noms) - set(retenus)),
+            "autres_documents": autres,
+        }
 
     @staticmethod
     def reglement_url(props: dict) -> Optional[str]:
