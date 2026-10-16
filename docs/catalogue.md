@@ -81,7 +81,14 @@ donne + clé + exposition oto + statut. Le détail par client vit dans son modul
 | `FinessClient` | FINESS (data.gouv) | annuaire établissements sanitaires/médico-sociaux | — |
 | `HasEssmsClient` | HAS (DuckDB/parquet) | évaluations ESSMS | — · extra `[sante]` |
 
-## 9. Générique
+## 9. Doctrine fiscale & conformité — service FOD `/api/doctrine/*`, `/api/vigilance/*`
+
+| Client | Source | Donne | Clé |
+|---|---|---|---|
+| `BofipClient` | BOFiP-Impôts (DGFiP) — jeu ODS `bofip-vigueur` de data.economie.gouv.fr, Licence Ouverte v2.0 | ~9 200 publications en vigueur (commentaires `Contenu` + `Actualité`) : recherche par mots, texte intégral d'un BOI, permalien officiel. Doctrine, pas la loi | — |
+| `gels_avoirs` + `gels_avoirs_ingest` | Registre national des gels d'avoirs (DG Trésor, `gels-avoirs.dgtresor.gouv.fr`, un JSON de ~13 Mo) | ~7 400 personnes, entités et navires sous mesure de gel (ONU, UE, national) : contrôle d'un nom (et prénom) avec nature, prénoms, naissance, fondement. Lève sur un registre tronqué ou trop ancien. Licence non établie par le producteur (le jeu data.gouv « Registre national des gels » est republié par l'organisation tierce « Ouvrons ! ») | — |
+
+## 10. Générique
 
 | Client | Source | Donne |
 |---|---|---|

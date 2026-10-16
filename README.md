@@ -14,6 +14,8 @@ partagés entre projets (source unique, pas de duplication).
 | `SireneClient` | INSEE Sirene (SIRET, siège) | `SIRENE_API_KEY` (env) |
 | `BdTopoClient` | IGN BDTOPO V3 via WFS (bâti existant d'une parcelle : emprise au sol, CES réel, usages, hauteurs) | — |
 | `SitadelClient` | Sit@del SDES/DiDo (permis de construire/aménager, demandeurs SIREN) — fichiers nationaux à pré-fetcher, pas d'API query-able | — |
+| `BofipClient` | BOFiP-Impôts, doctrine fiscale en vigueur (DGFiP, jeu `bofip-vigueur` de data.economie.gouv.fr, Licence Ouverte v2.0) : `rechercher(query)` (tous les mots, extrait autour du premier trouvé), `lire("BOI-…")` (texte intégral, suffixe de version `-AAAAMMJJ` toléré) | — |
+| `gels_avoirs` (module) | Registre national des gels d'avoirs (DG Trésor, ~7 400 inscrits, un JSON de ~13 Mo) : `gels_avoirs_ingest.telecharger()` → (publication, lignes) ; `gels_avoirs.controler(lignes, nom, prenom)` → correspondances, `nom_seul`. Lève `RegistreInvalide` sur un registre vide, tronqué (< 1 000 inscrits) ou trop ancien (`verifier_fraicheur`) au lieu de conclure « aucune correspondance ». Pur, stockage au consommateur. | — |
 | `FrenchTechClient` | Capitale French Tech (WordPress REST live) : annuaire écosystème (startups/structures/prestataires, dirigeant+email+tel), événements, appels à projet, financements + French Tech Central (Synbird) — défaut Aix-Marseille, `base_url` paramétrable | — |
 
 ```python

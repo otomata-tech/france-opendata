@@ -36,6 +36,8 @@
 - FinessClient      : annuaire établissements sanitaires/médico-sociaux FINESS (data.gouv) — sans clé
 - HasEssmsClient    : évaluations ESSMS (HAS, DuckDB sur parquet) — sans clé, extra [sante]
 - AidesClient       : aides publiques aux entreprises (data.aides-entreprises.fr, dumps quotidiens en cache TTL) — filtre géo hiérarchique + effectif + nature + échéance — sans clé
+- BofipClient       : BOFiP-Impôts, doctrine fiscale en vigueur (DGFiP, data.economie.gouv.fr) — recherche par mots, lecture d'un BOI — sans clé
+- gels_avoirs (module) : registre national des gels d'avoirs (DG Trésor) — validation, contrôle d'un nom (et prénom), fraîcheur d'une copie ; téléchargement `gels_avoirs_ingest`. Pur, stockage au consommateur (service FOD = PostgreSQL).
 - acco (module)     : accords d'entreprise (base nationale des accords collectifs, DILA, depuis 09/2017) — parser `acco.parse_acco` + crawler `acco_ingest`, extra [stock] (defusedxml). Stockage/recherche au consommateur (oto-backend = PostgreSQL).
 
 Honnêteté de la donnée servie (une valeur qu'on ne peut pas servir telle quelle est
@@ -84,12 +86,14 @@ from .has_essms import HasEssmsClient  # import lazy de duckdb (extra [sante]) d
 from .egapro import EgaproClient
 from .frenchtech import FrenchTechClient
 from .aides import AidesClient
+from .bofip import BofipClient
 # ACCO = parser + crawler (pas de client de requête) : importer `france_opendata.acco`
-# (parse_acco) et `france_opendata.acco_ingest` directement.
+# (parse_acco) et `france_opendata.acco_ingest` directement. Idem pour le registre des
+# gels d'avoirs : `france_opendata.gels_avoirs` (pur) et `gels_avoirs_ingest` (téléchargement).
 
 __all__ = ["EntreprisesClient", "SireneClient", "InpiClient", "BodaccClient", "BoampClient", "DvfClient", "DpeClient",
            "BdTopoClient", "SitadelClient", "GeorisquesClient",
            "EnedisClient", "OdreClient", "BdnbClient", "BegesClient", "IrepClient", "ElusClient", "LannuaireClient", "DecpClient", "DpeTertiaireClient", "BanClient", "ApiCartoClient", "PvgisClient",
            "IgnClient", "OverpassClient", "GpuClient", "QpvClient", "InseeMelodiClient", "InseeIrisClient", "EpfifClient",
            "OpendatasoftClient", "SpectacleClient", "FinessClient", "HasEssmsClient",
-           "EgaproClient", "FrenchTechClient", "AidesClient"]
+           "EgaproClient", "FrenchTechClient", "AidesClient", "BofipClient"]
