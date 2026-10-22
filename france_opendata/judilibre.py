@@ -106,9 +106,13 @@ class JudilibreClient:
                 did = tx.get("id")
                 if not did:
                     continue
-                if (tx.get("operation") or tx.get("type")) == "delete":
+                action = tx.get("action")
+                if action == "deleted":
                     yield {"id": did, "_deleted": True}
                     continue
+                if action not in ("created", "updated"):
+                    raise ValueError(f"Judilibre /transactionalhistory : action inconnue {action!r} "
+                                     f"pour {did}")
                 d = self.decision(did)
                 if d:
                     yield _map(d)
