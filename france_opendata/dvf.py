@@ -270,14 +270,12 @@ class DvfClient:
         dlon = radius_m / (111_320 * max(math.cos(math.radians(lat)), 1e-6))
         bbox = f"{lon - dlon},{lat - dlat},{lon + dlon},{lat + dlat}"
 
-        feats = self._paginate("geomutations", {"in_bbox": bbox})
-        # filtre années côté client (l'emprise borne déjà le volume) : les `years`
-        # dernières années AVEC data dans la zone (basé sur le millésime max présent).
-        anns = [f.get("properties", {}).get("anneemut") for f in feats]
-        anns = [a for a in anns if a]
-        if anns:
-            cutoff = max(anns) - years + 1
-            feats = [f for f in feats if (f.get("properties", {}).get("anneemut") or 0) >= cutoff]
+        # Les `years` dernières années AVEC data, filtrées CÔTÉ SERVEUR année par
+        # année. L'emprise seule ne borne pas le volume en zone dense : 300 m dans un
+        # arrondissement parisien = ~4 900 mutations depuis 2014, dont la première page
+        # met 13 à 32 s à venir de l'API (mesuré le 26/10/2026), contre ~1 s par année
+        # filtrée — tout l'historique paginé dépassait le délai des appelants.
+        feats = self._fetch_window("geomutations", {"in_bbox": bbox}, years)
         rows = self._normalize(feats, type_local, surface_min, surface_max)
         near: list[dict[str, Any]] = []
         for c in rows:
