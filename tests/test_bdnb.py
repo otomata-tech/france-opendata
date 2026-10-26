@@ -89,3 +89,22 @@ def test_le_seuil_d_emprise_part_en_entier():
     assert seuil_emprise(1000.0) == 1000
     assert seuil_emprise(1000) == 1000
     assert seuil_emprise(1000.5) == 1001, "arrondi au-dessus : la sémantique de ≥ tient"
+
+
+def test_en_copropriete_chaque_ligne_porte_le_nom_de_son_siren():
+    """Une ligne par (bâtiment, propriétaire) : les listes sont les mêmes sur chaque
+    ligne, seul `siren` change. Le nom du premier copropriétaire était recopié sur
+    toutes — un agent attribuait le bâtiment entier à la même société."""
+    listes = dict(l_siren=["484425277", "451938930", "320000001"],
+                  l_denomination_proprietaire=["MBRE", "LES TROIS FRERES", "FONCIERE C"])
+    noms = [_signal(_row(siren=s, **listes))["proprietaire"]["denomination"]
+            for s in listes["l_siren"]]
+    assert noms == ["MBRE", "LES TROIS FRERES", "FONCIERE C"]
+
+
+def test_listes_desalignees_pas_de_nom_emprunte():
+    s = _signal(_row(siren="451938930", l_siren=["484425277", "451938930"],
+                     l_denomination_proprietaire=["MBRE"]))
+    assert s["proprietaire"]["denomination"] is None
+    s = _signal(_row(siren="999999999"))
+    assert s["proprietaire"]["denomination"] is None, "un siren hors liste n'a pas de nom"

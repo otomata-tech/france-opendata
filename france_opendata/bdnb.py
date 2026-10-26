@@ -91,12 +91,29 @@ def _autres_proprietaires(row: dict[str, Any]) -> list[dict[str, Any]]:
     return autres
 
 
+def _denomination_principale(row: dict[str, Any]) -> Optional[str]:
+    """La dénomination du propriétaire PRINCIPAL de la ligne (`siren`).
+
+    La table rend une ligne par (bâtiment, propriétaire) : en copropriété, chaque
+    ligne porte un `siren` différent mais la MÊME liste `l_denomination_proprietaire`.
+    Prendre son premier élément recopiait le nom du premier copropriétaire sur toutes
+    les lignes. Le nom se lit au rang du `siren` dans `l_siren` ; un `siren` absent de
+    la liste, ou des listes de longueurs différentes, rendent None plutôt qu'un nom
+    pris sur la ligne d'à côté.
+    """
+    sirens = row.get("l_siren") or []
+    noms = row.get("l_denomination_proprietaire") or []
+    siren = row.get("siren")
+    if len(sirens) != len(noms) or siren not in sirens:
+        return None
+    return noms[sirens.index(siren)]
+
+
 def _signal(row: dict[str, Any]) -> Optional[dict[str, Any]]:
     """Un groupe de bâtiments, son propriétaire et de quoi le qualifier."""
     bid = row.get("batiment_groupe_id")
     if not bid:
         return None
-    noms = row.get("l_denomination_proprietaire") or []
     siren = row.get("siren")
     return {
         "ref_key": bid,
@@ -107,7 +124,7 @@ def _signal(row: dict[str, Any]) -> Optional[dict[str, Any]]:
         "adresse": row.get("libelle_adr_principale_ban"),
         "proprietaire": {
             "siren": siren,
-            "denomination": noms[0] if noms else None,
+            "denomination": _denomination_principale(row),
             "nb_locaux": row.get("nb_locaux_open"),
             # Toujours vrai dans cette table, rendu quand même : c'est ce qui
             # explique qu'un bâtiment voisin n'y soit pas.
