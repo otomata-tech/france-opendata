@@ -28,7 +28,9 @@ from __future__ import annotations
 import csv
 import io
 import math
+import re
 import statistics
+import unicodedata
 from datetime import datetime
 from typing import Any, Optional
 
@@ -52,6 +54,65 @@ TYPE_TO_CODTYPBIEN = {"Maison": "111", "Appartement": "121"}
 # jamais à la liste brute.
 PRIX_M2_MIN = 100
 PRIX_M2_MAX = 50000
+
+
+# Types de voie et leurs abréviations courantes → forme canonique. Sert à dire
+# quand la BAN a répondu sur une AUTRE voie que celle demandée (« rue des
+# Hirondelles » géocodée « Allée des Hirondelles »).
+_TYPES_VOIE = {
+    "rue": "rue", "r": "rue", "avenue": "avenue", "av": "avenue", "ave": "avenue",
+    "allee": "allee", "all": "allee", "boulevard": "boulevard", "bd": "boulevard",
+    "bld": "boulevard", "bvd": "boulevard", "chemin": "chemin", "che": "chemin",
+    "chem": "chemin", "impasse": "impasse", "imp": "impasse", "place": "place",
+    "pl": "place", "route": "route", "rte": "route", "quai": "quai", "cours": "cours",
+    "square": "square", "sq": "square", "passage": "passage", "voie": "voie",
+    "sentier": "sentier", "villa": "villa", "cite": "cite", "residence": "residence",
+    "res": "residence", "lotissement": "lotissement", "lot": "lotissement",
+    "hameau": "hameau", "ham": "hameau", "montee": "montee", "traverse": "traverse",
+    "trav": "traverse", "esplanade": "esplanade", "promenade": "promenade",
+    "faubourg": "faubourg", "fbg": "faubourg", "parvis": "parvis", "ruelle": "ruelle",
+    "venelle": "venelle", "clos": "clos", "domaine": "domaine", "dom": "domaine",
+    "rond-point": "rond-point", "rpt": "rond-point", "carrefour": "carrefour",
+    "galerie": "galerie", "mail": "mail", "jardin": "jardin", "vallee": "vallee",
+}
+_NUMERO_RE = re.compile(r"^\s*(\d+)\s*(?:bis|ter|quater|[a-z](?![a-z]))?[\s,]+(.*)$")
+
+
+def _sans_accents(texte: str) -> str:
+    return "".join(c for c in unicodedata.normalize("NFD", texte.lower())
+                   if unicodedata.category(c) != "Mn")
+
+
+def _type_voie(texte: Optional[str]) -> Optional[str]:
+    """Type canonique du premier mot d'un libellé de voie, ou None s'il n'en est pas un."""
+    if not texte:
+        return None
+    mots = re.findall(r"[a-z-]+", _sans_accents(texte))
+    return _TYPES_VOIE.get(mots[0].strip("-")) if mots else None
+
+
+def ecarts_geocodage(adresse: str, geo: dict[str, Any]) -> list[str]:
+    """Ce que le point géocodé NE respecte PAS de l'adresse demandée — numéro
+    introuvable (repli sur la voie ou la localité), numéro différent, type de voie
+    réinterprété. Liste vide quand rien ne diverge ; on ne compare que ce que
+    l'adresse dit (sans numéro, pas d'écart de numéro)."""
+    ecarts: list[str] = []
+    m = _NUMERO_RE.match(_sans_accents(adresse))
+    voie_demandee = m.group(2) if m else adresse
+    if m:
+        numero = m.group(1)
+        if geo.get("type") != "housenumber":
+            ecarts.append(
+                f"Numéro {numero} introuvable : la BAN a répondu au niveau "
+                f"« {geo.get('type')} » (centroïde, pas la porte).")
+        elif str(geo.get("housenumber") or "").split(" ")[0].lstrip("0") != numero.lstrip("0"):
+            ecarts.append(f"Numéro {numero} demandé, numéro {geo.get('housenumber')} géocodé.")
+    demande, obtenu = _type_voie(voie_demandee), _type_voie(geo.get("voie"))
+    if demande and obtenu and demande != obtenu:
+        ecarts.append(
+            f"Type de voie réinterprété : « {demande} » demandé, « {geo.get('voie')} » "
+            "géocodé.")
+    return ecarts
 
 
 class DvfClient:
@@ -117,6 +178,12 @@ class DvfClient:
             "code_commune": p.get("citycode"),
             "label": p.get("label"),
             "score": p.get("score"),
+            # Le NIVEAU du point : housenumber (la porte), street (centroïde de la
+            # voie), locality, municipality. Sans lui, un repli sur la voie se lit
+            # comme l'adresse exacte.
+            "type": p.get("type"),
+            "housenumber": p.get("housenumber"),
+            "voie": p.get("street") or p.get("name"),
         }
 
     def _reverse_addresses(self, rows: list[dict[str, Any]]) -> None:
@@ -290,8 +357,9 @@ class DvfClient:
             c.pop("_geometry", None)
 
         res_pm2 = [c["prix_m2"] for c in near if c["prix_m2"] and c["type_local"]]
-        return {
+        out = {
             "adresse_geocodee": geo["label"],
+            "geocodage": {"type": geo.get("type"), "score": geo.get("score")},
             "code_commune": geo["code_commune"],
             "radius_m": radius_m,
             "type_local": type_local,
@@ -300,6 +368,12 @@ class DvfClient:
             "median_prix_m2": round(statistics.median(res_pm2)) if res_pm2 else None,
             "mutations": near,
         }
+        ecarts = ecarts_geocodage(adresse, geo)
+        if ecarts:
+            out["avertissement_geocodage"] = (
+                " ".join(ecarts) + " `distance_m` est mesurée depuis le point géocodé "
+                f"({geo['label']}), pas depuis l'adresse demandée.")
+        return out
 
     def stats(
         self,
