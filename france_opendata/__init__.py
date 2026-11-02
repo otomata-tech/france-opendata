@@ -48,6 +48,7 @@ MARQUÉE, jamais corrigée ni tue) — trois modules purs, sans I/O :
 - alertes (module)  : le vocabulaire FERMÉ des codes d'alerte + la certitude que chacun engage (prouvé vs inféré). Contrat lu par du code, publié dans l'OpenAPI du service.
 - finances (module) : bloc `finances` de Recherche Entreprises — le 0 code l'absence, l'unité du dépôt n'est pas transmise. Appliqué par `EntreprisesClient`.
 - liasse (module)   : liasse INPI — la sentinelle INT32 du parquet confond « poste absent » et « montant qui a débordé ». Appliqué par `InpiClient`.
+- compact (module)  : lecture agent des fiches entreprise et ICPE (projection qui garde les alertes, profil multi-sources, lot) — pur, clients passés en paramètre.
 
 Lib autonome (dépend de `requests` uniquement). Source unique partagée entre projets
 (remplace la duplication des connecteurs).
