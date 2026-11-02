@@ -1,5 +1,5 @@
 """Compactage des réponses entreprise et ICPE pour un agent : la lecture qu'en fait un
-consommateur LLM, partagée au lieu d'être recopiée (backend oto, service de données GR).
+consommateur LLM, partagée au lieu d'être recopiée (backends d'agents).
 
 Pur, sans I/O propre : les fonctions qui interrogent prennent les clients en paramètre
 (`EntreprisesClient`, `InpiClient`, `BodaccClient`, ou tout objet de même surface — un
