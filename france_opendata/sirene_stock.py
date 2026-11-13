@@ -33,10 +33,13 @@ from __future__ import annotations
 
 import datetime as _dt
 import os
+import re
 import threading
 from typing import Any, Iterable, Optional
 
 import duckdb
+
+from .erreurs import ParametreInvalide
 
 
 DEFAULT_PATH = "/opt/oto-mcp/data/sirene/StockEtablissement.parquet"
@@ -156,6 +159,9 @@ _COLUMN_MAP = {
     "nomenclatureActivitePrincipaleEtablissement": "naf_nomenclature",
     "trancheEffectifsEtablissement": "tranche_effectifs",
     "anneeEffectifsEtablissement": "annee_effectifs",
+    # O = employeur, N = non employeur : distinct de la tranche, qui peut dire « 0 »
+    # pour un établissement employeur l'année d'avant (ou rester vide).
+    "caractereEmployeurEtablissement": "caractere_employeur",
     "complementAdresseEtablissement": "complement_adresse",
     "numeroVoieEtablissement": "numero_voie",
     "indiceRepetitionEtablissement": "indice_repetition",
@@ -437,6 +443,11 @@ def _normalize_address(etab: dict[str, Any]) -> dict[str, Any]:
         "denomination": etab.get("denomination"),
         "lambert_x": etab.get("lambert_x"),
         "lambert_y": etab.get("lambert_y"),
+        # L'effectif de l'ÉTABLISSEMENT (code TEFEN INSEE, son année) et son caractère
+        # employeur : calculés par le SELECT, ils étaient jetés ici.
+        "tranche_effectifs": etab.get("tranche_effectifs"),
+        "annee_effectifs": etab.get("annee_effectifs"),
+        "caractere_employeur": etab.get("caractere_employeur"),
     }
 
 
@@ -445,6 +456,46 @@ def headquarters_addresses(sirens: Iterable[str]) -> dict[str, dict[str, Any]]:
     en UNE requête. Remplace l'enrichissement par table PG `sirene_sieges` dupliquée.
     """
     return {siren: _normalize_address(etab) for siren, etab in lookup_sieges(sirens).items()}
+
+
+# Un lot de SIRET se lit en UN scan (`siret IN (…)`) : la borne tient la taille de la
+# requête et de la réponse, pas le coût du scan, qui est le même pour 1 ou 1 000.
+SIRETS_MAX = _env_int("SIRENE_STOCK_SIRETS_MAX", 1000)
+_SIRET_RE = re.compile(r"\d{14}")
+
+
+def lookup_sirets(sirets: Iterable[str]) -> dict[str, Any]:
+    """Établissements d'une LISTE de SIRET en UNE requête (1 scan, pas N), à la forme
+    de `headquarters_addresses` — effectif de l'établissement, son année et son
+    caractère employeur compris.
+
+    Rend `{"items": {siret: établissement}, "erreurs": [{"siret", "code"}], "count"}` :
+    une erreur PAR ÉLÉMENT, jamais pour le lot — `siret_invalide` (pas 14 chiffres,
+    espaces retirés), `introuvable` (absent du stock). Un SIRET en double n'est lu
+    qu'une fois. Au-delà de `SIRETS_MAX` SIRET distincts, le lot entier est refusé
+    (`ParametreInvalide`) : le couper est le geste de l'appelant, pas le nôtre.
+    """
+    vus = list(dict.fromkeys(re.sub(r"\s+", "", str(x or "")) for x in sirets))
+    if len(vus) > SIRETS_MAX:
+        raise ParametreInvalide("sirets", f"{len(vus)} SIRET distincts, {SIRETS_MAX} au plus "
+                                          "par appel : couper le lot.")
+    valides = [s for s in vus if _SIRET_RE.fullmatch(s)]
+    erreurs = [{"siret": s, "code": "siret_invalide"} for s in vus if s not in valides]
+    items: dict[str, dict[str, Any]] = {}
+    if valides:
+        placeholders = ", ".join("?" * len(valides))
+        sql = (
+            f"SELECT {_SELECT_CLAUSE} FROM {_from_parquet()} "
+            f"WHERE siret IN ({placeholders}) "
+            "QUALIFY ROW_NUMBER() OVER "
+            "(PARTITION BY siret ORDER BY dateDebut DESC NULLS LAST) = 1"
+        )
+        cols = _output_columns()
+        for r in _query(sql, valides, fetch="all"):
+            d = _row_to_dict(r, cols)
+            items[d["siret"]] = _normalize_address(d)
+    erreurs += [{"siret": s, "code": "introuvable"} for s in valides if s not in items]
+    return {"items": items, "erreurs": erreurs, "count": len(items)}
 
 
 def list_establishments(siren: str, active_only: bool = True) -> list[dict[str, Any]]:
